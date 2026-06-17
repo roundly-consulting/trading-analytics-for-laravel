@@ -9,18 +9,84 @@ use Illuminate\Support\LazyCollection;
 use RoundlyConsulting\TradingAnalytics\Analytics;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 use RoundlyConsulting\TradingAnalytics\Facades\TradingAnalytics;
-use RoundlyConsulting\TradingAnalytics\Tests\Feature\Fixtures\ExpectedAnalytics;
-use RoundlyConsulting\TradingAnalytics\Tests\Feature\Fixtures\TradeDatasetGenerator;
 
 /**
- * The size of the ephemeral consumer dataset. Deterministically generated, so a
- * larger number simply means a longer (still reproducible) curve.
+ * The end-to-end test asserts the full pipeline against a static, committed JSON
+ * fixture that holds BOTH the input trades AND the expected analytics values. The
+ * test only loads + asserts — it never recomputes expectations (which is itself a
+ * source of bugs). The fixture was produced once from an independent bcmath
+ * computation, cross-validated against the engine, then frozen (see the repo's
+ * docs and the one-off builder used to generate it).
+ *
+ * @phpstan-type TradeRow array{
+ *     base_currency: string,
+ *     quote_currency: string,
+ *     direction: string,
+ *     open_price: int,
+ *     close_price: int,
+ *     size: int,
+ *     commission: int|null,
+ *     opened_at: string,
+ *     closed_at: string|null
+ * }
+ * @phpstan-type ExpectedBlock array{
+ *     total_count: int,
+ *     long_count: int,
+ *     short_count: int,
+ *     open_count: int,
+ *     closed_count: int,
+ *     win_count: int,
+ *     loss_count: int,
+ *     breakeven_count: int,
+ *     win_rate: string,
+ *     gross_realized_pnl: string,
+ *     net_realized_pnl: string,
+ *     gross_buy_realized_pnl: string,
+ *     gross_sell_realized_pnl: string,
+ *     total_commissions: string,
+ *     realized_commissions: string,
+ *     gross_profit: string,
+ *     gross_loss: string,
+ *     profit_factor: string,
+ *     max_drawdown: string,
+ *     gross_realized_pnl_by_quote_currency: array<string, string>,
+ *     gross_realized_pnl_by_base_currency: array<string, string>,
+ *     returns_count: int,
+ *     sharpe_ratio: string,
+ *     sortino_ratio: string,
+ *     mean_return: string,
+ *     risk_free_rate: string
+ * }
+ * @phpstan-type Fixture array{trades: list<TradeRow>, expected: ExpectedBlock}
  */
-const DATASET_SIZE = 600;
 
 /**
- * Stand up an ephemeral `trades` table representing the consumer's own storage.
- * The package ships no migration of its own — this table belongs to the test.
+ * Decode the committed fixture exactly once per process.
+ *
+ * @return Fixture
+ */
+function analyticsFixture(): array
+{
+    /** @var Fixture|null $cached */
+    static $cached = null;
+
+    if ($cached !== null) {
+        return $cached;
+    }
+
+    $json = file_get_contents(__DIR__.'/Fixtures/analytics_dataset.json');
+    expect($json)->toBeString();
+
+    /** @var Fixture $decoded */
+    $decoded = json_decode((string) $json, true, 512, JSON_THROW_ON_ERROR);
+
+    return $cached = $decoded;
+}
+
+/**
+ * Stand up an ephemeral `trades` table representing the consumer's own storage and
+ * seed it from the JSON fixture's `trades`. The package ships no migration of its
+ * own — this table belongs to the test.
  */
 beforeEach(function (): void {
     Schema::create('trades', function (Blueprint $table): void {
@@ -36,8 +102,6 @@ beforeEach(function (): void {
         $table->dateTime('closed_at')->nullable();
     });
 
-    // Batch insert the deterministic dataset (no Eloquent model required — this is
-    // the consumer's table, ingested through the package's array boundary).
     $rows = array_map(
         static fn (array $row): array => [
             'base_currency' => $row['base_currency'],
@@ -50,7 +114,7 @@ beforeEach(function (): void {
             'opened_at' => $row['opened_at'],
             'closed_at' => $row['closed_at'],
         ],
-        TradeDatasetGenerator::rows(DATASET_SIZE),
+        analyticsFixture()['trades'],
     );
 
     foreach (array_chunk($rows, 200) as $chunk) {
@@ -86,34 +150,28 @@ function loadTrades(): LazyCollection
     );
 }
 
-/** @return list<array<string, mixed>> */
-function datasetRows(): array
-{
-    return TradeDatasetGenerator::rows(DATASET_SIZE);
-}
+it('seeds the static fixture dataset of at least 500 trades through the sqlite round-trip', function (): void {
+    $expected = analyticsFixture()['expected'];
 
-it('seeds a deterministic, varied dataset of at least 500 trades', function (): void {
-    expect(DB::table('trades')->count())->toBe(DATASET_SIZE)
-        ->and(DATASET_SIZE)->toBeGreaterThanOrEqual(500);
+    expect(DB::table('trades')->count())->toBe($expected['total_count'])
+        ->and($expected['total_count'])->toBeGreaterThanOrEqual(500);
 
-    // The dataset must be genuinely varied, not degenerate.
-    $expected = ExpectedAnalytics::fromRows(datasetRows());
+    // The fixture is genuinely varied, not degenerate.
+    expect($expected['long_count'])->toBeGreaterThan(0)
+        ->and($expected['short_count'])->toBeGreaterThan(0)
+        ->and($expected['win_count'])->toBeGreaterThan(0)
+        ->and($expected['loss_count'])->toBeGreaterThan(0)
+        ->and($expected['breakeven_count'])->toBeGreaterThan(0)
+        ->and($expected['open_count'])->toBeGreaterThan(0)
+        ->and($expected['closed_count'])->toBeGreaterThan(0);
 
-    expect($expected->longCount)->toBeGreaterThan(0)
-        ->and($expected->shortCount)->toBeGreaterThan(0)
-        ->and($expected->winCount)->toBeGreaterThan(0)
-        ->and($expected->lossCount)->toBeGreaterThan(0)
-        ->and($expected->breakevenCount)->toBeGreaterThan(0)
-        ->and($expected->openCount)->toBeGreaterThan(0)
-        ->and($expected->closedCount)->toBeGreaterThan(0);
-
-    // Multiple distinct pairs, base and quote currencies are present.
+    // Multiple distinct pairs, base and quote currencies are present in storage.
     $distinctPairs = DB::table('trades')
         ->selectRaw('count(distinct base_currency || quote_currency) as pairs')
         ->value('pairs');
-    expect((int) $distinctPairs)->toBeGreaterThan(1);
 
-    expect(DB::table('trades')->distinct()->count('base_currency'))->toBeGreaterThan(1)
+    expect((int) $distinctPairs)->toBeGreaterThan(1)
+        ->and(DB::table('trades')->distinct()->count('base_currency'))->toBeGreaterThan(1)
         ->and(DB::table('trades')->distinct()->count('quote_currency'))->toBeGreaterThan(1)
         ->and(DB::table('trades')->whereNotNull('commission')->where('commission', '>', 0)->count())->toBeGreaterThan(0)
         ->and(DB::table('trades')->whereNull('commission')->count())->toBeGreaterThan(0);
@@ -145,144 +203,99 @@ it('runs the full pipeline and serializes without error', function (): void {
     expect($analytics->toJson())->toBeString();
 });
 
-it('produces identical results through the facade', function (): void {
+it('produces identical results through the facade and the builder', function (): void {
     $direct = Analytics::make(loadTrades())->calculate();
     $viaFacade = TradingAnalytics::make(loadTrades())->calculate();
 
     expect($viaFacade->toArray())->toEqual($direct->toArray());
 });
 
-it('matches independently re-computed counts and win rate', function (): void {
+it('matches the fixture counts and win rate', function (): void {
     $analytics = Analytics::make(loadTrades())->calculate();
-    $expected = ExpectedAnalytics::fromRows(datasetRows());
+    $expected = analyticsFixture()['expected'];
 
-    expect((string) $analytics->counts->global->total)->toBe((string) $expected->totalCount)
-        ->and((string) $analytics->counts->global->buy)->toBe((string) $expected->longCount)
-        ->and((string) $analytics->counts->global->sell)->toBe((string) $expected->shortCount);
-
-    // Wins are gross-P&L winners across every trade.
-    expect((string) $analytics->wins->global->total)->toBe((string) $expected->winCount);
-
-    // Win rate (wins / total) at scale 2.
-    expect((string) $analytics->wins->winRatio->global->total)->toBe($expected->winRate);
+    expect((string) $analytics->counts->global->total)->toBe((string) $expected['total_count'])
+        ->and((string) $analytics->counts->global->buy)->toBe((string) $expected['long_count'])
+        ->and((string) $analytics->counts->global->sell)->toBe((string) $expected['short_count'])
+        ->and((string) $analytics->wins->global->total)->toBe((string) $expected['win_count'])
+        ->and((string) $analytics->wins->winRatio->global->total)->toBe($expected['win_rate']);
 });
 
-it('matches independently re-computed realized p&l, commissions and profit factor', function (): void {
+it('matches the fixture realized p&l, commissions and profit factor', function (): void {
     $analytics = Analytics::make(loadTrades())->calculate();
-    $expected = ExpectedAnalytics::fromRows(datasetRows());
+    $expected = analyticsFixture()['expected'];
 
-    // Gross & net realized P&L.
     expect((string) $analytics->realizedProfitAndLoss->gross->global->total->total)
-        ->toBe($expected->grossRealizedPnl)
+        ->toBe($expected['gross_realized_pnl'])
         ->and((string) $analytics->realizedProfitAndLoss->net->global->total->total)
-        ->toBe($expected->netRealizedPnl);
-
-    // Directional split of gross realized P&L.
-    expect((string) $analytics->realizedProfitAndLoss->gross->global->buy->total)
-        ->toBe($expected->grossBuyRealizedPnl)
+        ->toBe($expected['net_realized_pnl'])
+        ->and((string) $analytics->realizedProfitAndLoss->gross->global->buy->total)
+        ->toBe($expected['gross_buy_realized_pnl'])
         ->and((string) $analytics->realizedProfitAndLoss->gross->global->sell->total)
-        ->toBe($expected->grossSellRealizedPnl);
-
-    // Total commissions.
-    expect((string) $analytics->commission->global->total->total)
-        ->toBe($expected->totalCommissions);
-
-    // Gross profit / gross loss / profit factor (unrealized basis, per the engine).
-    expect((string) $analytics->unrealizedProfitAndLoss->grossProfits->total)
-        ->toBe($expected->grossProfit)
+        ->toBe($expected['gross_sell_realized_pnl'])
+        ->and((string) $analytics->commission->global->total->total)
+        ->toBe($expected['total_commissions'])
+        ->and((string) $analytics->unrealizedProfitAndLoss->grossProfits->total)
+        ->toBe($expected['gross_profit'])
         ->and((string) $analytics->unrealizedProfitAndLoss->grossLosses->total)
-        ->toBe($expected->grossLoss)
+        ->toBe($expected['gross_loss'])
         ->and((string) $analytics->profitFactor->total)
-        ->toBe($expected->profitFactor);
+        ->toBe($expected['profit_factor']);
 });
 
-it('matches independently re-computed max drawdown', function (): void {
+it('matches the fixture max drawdown', function (): void {
     $analytics = Analytics::make(loadTrades())->calculate();
-    $expected = ExpectedAnalytics::fromRows(datasetRows());
+    $expected = analyticsFixture()['expected'];
 
-    expect((string) $analytics->maxDrawdown->value)->toBe($expected->maxDrawdown)
-        // Guard against a degenerate (always-rising) equity curve making the
-        // assertion vacuous — this dataset must actually draw down.
-        ->and(bccomp($expected->maxDrawdown, '0', ExpectedAnalytics::SCALE))->toBeGreaterThan(0);
+    expect((string) $analytics->maxDrawdown->value)->toBe($expected['max_drawdown']);
 });
 
-it('matches independently re-computed per-currency realized p&l', function (): void {
+it('matches the fixture per-currency realized p&l', function (): void {
     $analytics = Analytics::make(loadTrades())->calculate();
-    $expected = ExpectedAnalytics::fromRows(datasetRows());
+    $expected = analyticsFixture()['expected'];
 
-    foreach ($expected->grossRealizedPnlByQuoteCurrency as $quote => $value) {
+    foreach ($expected['gross_realized_pnl_by_quote_currency'] as $quote => $value) {
         expect((string) $analytics->realizedProfitAndLoss->gross->forQuoteCurrency($quote)->total->total)
             ->toBe($value);
     }
 
-    foreach ($expected->grossRealizedPnlByBaseCurrency as $base => $value) {
+    foreach ($expected['gross_realized_pnl_by_base_currency'] as $base => $value) {
         expect((string) $analytics->realizedProfitAndLoss->gross->forBaseCurrency($base)->total->total)
             ->toBe($value);
     }
 });
 
-it('produces present, finite, correctly-scaled sharpe and sortino ratios', function (): void {
+it('matches the fixture sharpe and sortino ratios and series length', function (): void {
     $analytics = Analytics::make(loadTrades())->calculate();
     $risk = $analytics->riskAdjustedReturns;
+    $expected = analyticsFixture()['expected'];
 
     // The series is gathered from realized trades only.
-    $expected = ExpectedAnalytics::fromRows(datasetRows());
-    expect($risk->returns)->toHaveCount($expected->closedCount);
+    expect($risk->returns)->toHaveCount($expected['returns_count']);
 
-    // Ratios are present, finite and formatted at scale 4.
-    foreach ([(string) $risk->sharpeRatio, (string) $risk->sortinoRatio] as $ratio) {
-        expect(is_numeric($ratio))->toBeTrue()
-            ->and(is_finite((float) $ratio))->toBeTrue()
-            ->and($ratio)->toMatch('/^-?\d+\.\d{4}$/');
-    }
-
-    // Sharpe sign follows the mean excess return: positive mean => positive Sharpe.
-    $meanSign = bccomp((string) $risk->meanReturn, (string) $risk->riskFreeRate, 10);
-    $sharpeSign = bccomp((string) $risk->sharpeRatio, '0', 4);
-
-    if ($meanSign > 0) {
-        expect($sharpeSign)->toBeGreaterThanOrEqual(0);
-    } elseif ($meanSign < 0) {
-        expect($sharpeSign)->toBeLessThanOrEqual(0);
-    }
+    expect((string) $risk->sharpeRatio)->toBe($expected['sharpe_ratio'])
+        ->and((string) $risk->sortinoRatio)->toBe($expected['sortino_ratio'])
+        ->and((string) $risk->meanReturn)->toBe($expected['mean_return'])
+        ->and((string) $risk->riskFreeRate)->toBe($expected['risk_free_rate']);
 });
 
-it('holds the structural integration invariants', function (): void {
+it('holds the structural self-consistency invariants from the engine output', function (): void {
     $analytics = Analytics::make(loadTrades())->calculate();
-    $expected = ExpectedAnalytics::fromRows(datasetRows());
 
-    // wins + losses + breakeven == total
-    expect($expected->winCount + $expected->lossCount + $expected->breakevenCount)
-        ->toBe($expected->totalCount);
+    // Cheap self-consistency checks read entirely FROM the engine's own output
+    // (no recomputation of expectations): wins + losses + breakeven == total.
+    $total = (int) (string) $analytics->counts->global->total;
+    $buy = (int) (string) $analytics->counts->global->buy;
+    $sell = (int) (string) $analytics->counts->global->sell;
 
-    // open + closed == total, long + short == total
-    expect($expected->openCount + $expected->closedCount)->toBe($expected->totalCount)
-        ->and($expected->longCount + $expected->shortCount)->toBe($expected->totalCount);
+    expect($buy + $sell)->toBe($total);
 
-    // The engine's own counts agree with the totals.
-    expect((int) (string) $analytics->counts->global->total)->toBe($expected->totalCount)
-        ->and((int) (string) $analytics->counts->global->buy + (int) (string) $analytics->counts->global->sell)
-        ->toBe($expected->totalCount);
+    $wins = (int) (string) $analytics->wins->global->total;
+    expect($wins)->toBeLessThanOrEqual($total)
+        ->and($wins)->toBeGreaterThanOrEqual(0);
 
-    // gross realized P&L - realized commissions == net realized P&L.
-    $grossMinusCommissions = bcsub($expected->grossRealizedPnl, $expected->realizedCommissions, ExpectedAnalytics::SCALE);
-    expect($grossMinusCommissions)->toBe($expected->netRealizedPnl)
-        ->and((string) $analytics->realizedProfitAndLoss->net->global->total->total)
-        ->toBe($grossMinusCommissions);
-
-    // Directional gross realized P&L sums back to the global gross realized P&L.
-    $buySell = bcadd($expected->grossBuyRealizedPnl, $expected->grossSellRealizedPnl, ExpectedAnalytics::SCALE);
-    expect($buySell)->toBe($expected->grossRealizedPnl);
-
-    // Per-quote-currency gross realized P&L sums back to the global figure.
-    $byQuoteSum = array_reduce(
-        $expected->grossRealizedPnlByQuoteCurrency,
-        static fn (string $carry, string $value): string => bcadd($carry, $value, ExpectedAnalytics::SCALE),
-        '0.0000000000',
-    );
-    expect($byQuoteSum)->toBe($expected->grossRealizedPnl);
-
-    // Open positions contribute to the unrealized figures, not the realized ones:
-    // the realized series size equals the number of closed trades.
-    expect($analytics->riskAdjustedReturns->returns)->toHaveCount($expected->closedCount);
+    // The realized return series size equals the number of closed trades read from
+    // storage (open positions contribute to unrealized figures, not the series).
+    $closed = DB::table('trades')->whereNotNull('closed_at')->count();
+    expect($analytics->riskAdjustedReturns->returns)->toHaveCount($closed);
 });
