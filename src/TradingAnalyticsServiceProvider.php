@@ -13,4 +13,9 @@ final class TradingAnalyticsServiceProvider extends PackageServiceProvider
     {
         $package->name('trading-analytics');
     }
+
+    public function packageRegistered(): void
+    {
+        $this->app->singleton('trading-analytics', fn (): AnalyticsFactory => new AnalyticsFactory);
+    }
 }
