@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace RoundlyConsulting\TradingAnalytics;
 
 use Closure;
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\LazyCollection;
+use JsonSerializable;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results\Counts;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results\CumulativeReturn;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results\Expectancy;
@@ -27,14 +30,23 @@ use RoundlyConsulting\TradingAnalytics\Enums\Period;
 use RoundlyConsulting\TradingAnalytics\Exceptions\UnknownCalculatorException;
 use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
 use RoundlyConsulting\TradingAnalytics\Traits\HasScale;
+use RoundlyConsulting\TradingAnalytics\Traits\SerializesToJson;
 
 /**
  * Entry point for the engine. Open for extension: subclass it to register custom
  * calculators or override the per-trade / after-trades hooks.
+ *
+ * Subclasses must keep a constructor signature compatible with this one so the
+ * late-static make()/for() builders stay safe.
+ *
+ * @implements Arrayable<string, mixed>
+ *
+ * @phpstan-consistent-constructor
  */
-class Analytics
+class Analytics implements Arrayable, Jsonable, JsonSerializable
 {
     use HasScale;
+    use SerializesToJson;
 
     public ?Counts $counts = null;
 
@@ -129,18 +141,66 @@ class Analytics
     public function __construct(protected LazyCollection $trades)
     {
         $this->calculators = $this->defaultCalculators;
+
+        $this->scale = $this->defaultScale();
+        $this->winRatePeriod = $this->defaultWinRatePeriod();
     }
 
-    /** @param LazyCollection<int, Trade> $trades */
-    public static function make(LazyCollection $trades): self
+    /**
+     * The default bcmath scale: the configured value when a Laravel config
+     * repository is bound, otherwise the library's built-in default so the
+     * engine still works outside a booted app.
+     */
+    protected function defaultScale(): int
     {
-        return new self($trades);
+        $configured = $this->configuredValue('trading-analytics.scale');
+
+        return is_numeric($configured) ? (int) $configured : $this->scale;
     }
 
-    /** @param LazyCollection<int, Trade> $trades */
-    public static function for(LazyCollection $trades): self
+    /**
+     * The default win-rate bucketing period: the configured value when bound
+     * and recognised, otherwise the built-in default. An unrecognised value
+     * falls back rather than throwing at construction.
+     */
+    protected function defaultWinRatePeriod(): Period
     {
-        return new self($trades);
+        $configured = $this->configuredValue('trading-analytics.win_rate_period');
+
+        if (is_string($configured) && ($period = Period::tryFrom($configured)) !== null) {
+            return $period;
+        }
+
+        return $this->winRatePeriod;
+    }
+
+    /**
+     * Read a config value only when a Laravel container with a bound config
+     * repository is available, so the package never assumes a booted app.
+     */
+    protected function configuredValue(string $key): mixed
+    {
+        if (! function_exists('app') || ! app()->bound('config')) {
+            return null;
+        }
+
+        return config($key);
+    }
+
+    /**
+     * @param  LazyCollection<int, Trade>  $trades
+     */
+    public static function make(LazyCollection $trades): static
+    {
+        return new static($trades);
+    }
+
+    /**
+     * @param  LazyCollection<int, Trade>  $trades
+     */
+    public static function for(LazyCollection $trades): static
+    {
+        return new static($trades);
     }
 
     /**
@@ -148,7 +208,7 @@ class Analytics
      *
      * @param  list<class-string<AnalyticsInterface>>  $calculators
      */
-    public function only(array $calculators): self
+    public function only(array $calculators): static
     {
         $this->calculators = $this->resolveCalculators($calculators);
 
@@ -160,7 +220,7 @@ class Analytics
      *
      * @param  list<class-string<AnalyticsInterface>>  $calculators
      */
-    public function except(array $calculators): self
+    public function except(array $calculators): static
     {
         foreach ($calculators as $calculator) {
             $this->assertIsCalculator($calculator);
@@ -174,21 +234,21 @@ class Analytics
         return $this;
     }
 
-    public function usingWinRatePeriod(Period $period): self
+    public function usingWinRatePeriod(Period $period): static
     {
         $this->winRatePeriod = $period;
 
         return $this;
     }
 
-    public function onEachTrade(Closure $closure): self
+    public function onEachTrade(Closure $closure): static
     {
         $this->onEachTrade = $closure;
 
         return $this;
     }
 
-    public function afterTrades(Closure $closure): self
+    public function afterTrades(Closure $closure): static
     {
         $this->afterEachTrades = $closure;
 
@@ -219,7 +279,7 @@ class Analytics
         static::$calculateAfterTradesUsing = null;
     }
 
-    public function calculate(): self
+    public function calculate(): static
     {
         $this->initializeAnalyticsResults();
 
@@ -242,6 +302,17 @@ class Analytics
     public function hasBeenCalculated(): bool
     {
         return $this->hasBeenCalculated;
+    }
+
+    /**
+     * The calculator class-strings this engine runs, in canonical order — the
+     * values {@see only()} and {@see except()} accept.
+     *
+     * @return list<class-string<AnalyticsInterface>>
+     */
+    public function metrics(): array
+    {
+        return $this->defaultCalculators;
     }
 
     /** @return array<string, mixed> */

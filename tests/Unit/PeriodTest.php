@@ -14,3 +14,7 @@ it('buckets a moment per period', function (Period $period, string $expected) {
     [Period::WEEKLY, '2024-W32'],
     [Period::MONTHLY, '2024-08'],
 ]);
+
+it('returns the period values', function () {
+    expect(Period::values())->toBe(['daily', 'weekly', 'monthly']);
+});

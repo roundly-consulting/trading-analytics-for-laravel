@@ -13,7 +13,12 @@ use RoundlyConsulting\TradingAnalytics\AnalyticsFactory;
  * @method static Analytics make(LazyCollection<int, \RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade> $trades)
  * @method static Analytics for(LazyCollection<int, \RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade> $trades)
  *
+ * Both entry points return a fluent {@see Analytics} instance, so IDE
+ * autocompletion for the chain (->scale(), ->only(), ->calculate(), …) flows
+ * from its return type.
+ *
  * @see AnalyticsFactory
+ * @see Analytics
  */
 final class TradingAnalytics extends Facade
 {

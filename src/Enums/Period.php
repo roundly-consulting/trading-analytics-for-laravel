@@ -12,6 +12,17 @@ enum Period: string
     case WEEKLY = 'weekly';
     case MONTHLY = 'monthly';
 
+    /**
+     * The string value of every case, handy for building selects or validation
+     * rules in a host app.
+     *
+     * @return list<string>
+     */
+    public static function values(): array
+    {
+        return array_map(static fn (self $period): string => $period->value, self::cases());
+    }
+
     public function bucketFor(Carbon $moment): string
     {
         return match ($this) {

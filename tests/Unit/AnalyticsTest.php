@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\LazyCollection;
 use RoundlyConsulting\TradingAnalytics\Analytics;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
+use RoundlyConsulting\TradingAnalytics\Enums\Period;
 use RoundlyConsulting\TradingAnalytics\Exceptions\UnknownCalculatorException;
 
 $expectedCalculators = [
@@ -154,6 +157,65 @@ it('runs instance per-trade and after-trades hooks', function (LazyCollection $t
     expect(array_keys($perTradeCalculators))->toBe($expectedCalculators);
     expect(array_keys($afterTradesCalculators))->toBe($expectedCalculators);
 })->with('default-trades');
+
+it('serializes the analytics result to json', function (LazyCollection $trades) {
+    $analytics = Analytics::make($trades)->calculate();
+
+    expect($analytics->toJson())->toBe(json_encode($analytics->toArray()))
+        ->and(json_encode($analytics))->toBe($analytics->toJson());
+})->with('default-trades');
+
+it('implements the laravel arrayable and jsonable contracts', function (LazyCollection $trades) {
+    $analytics = Analytics::make($trades);
+
+    expect($analytics)
+        ->toBeInstanceOf(Arrayable::class)
+        ->toBeInstanceOf(Jsonable::class)
+        ->toBeInstanceOf(JsonSerializable::class);
+})->with('empty-trades');
+
+it('lists the available metric calculators', function (LazyCollection $trades) use ($expectedCalculators) {
+    $metrics = Analytics::make($trades)->metrics();
+
+    expect($metrics)->toHaveCount(count($expectedCalculators))
+        ->and(array_map(class_basename(...), $metrics))->toBe($expectedCalculators);
+})->with('empty-trades');
+
+it('reads the default scale from config', function (LazyCollection $trades) {
+    config()->set('trading-analytics.scale', 5);
+
+    expect(Analytics::make($trades)->getScale())->toBe(5);
+})->with('empty-trades');
+
+it('lets an explicit scale override config', function (LazyCollection $trades) {
+    config()->set('trading-analytics.scale', 5);
+
+    expect(Analytics::make($trades)->scale(8)->getScale())->toBe(8);
+})->with('empty-trades');
+
+it('reads the default win-rate period from config', function (LazyCollection $trades) {
+    config()->set('trading-analytics.win_rate_period', 'weekly');
+
+    $analytics = Analytics::make($trades)->only([Analytics\WinRateByPeriod::class])->calculate();
+
+    expect($analytics->winRateByPeriod?->period)
+        ->toBe(Period::WEEKLY);
+})->with('default-trades');
+
+it('falls back to daily on an invalid configured period', function (LazyCollection $trades) {
+    config()->set('trading-analytics.win_rate_period', 'hourly');
+
+    $analytics = Analytics::make($trades)->only([Analytics\WinRateByPeriod::class])->calculate();
+
+    expect($analytics->winRateByPeriod?->period)
+        ->toBe(Period::DAILY);
+})->with('default-trades');
+
+it('uses the literal default scale when no config value is set', function (LazyCollection $trades) {
+    config()->set('trading-analytics.scale', null);
+
+    expect(Analytics::make($trades)->getScale())->toBe(10);
+})->with('empty-trades');
 
 it('keeps the deprecated static hooks working', function (LazyCollection $trades) {
     $perTradeCalculators = [];

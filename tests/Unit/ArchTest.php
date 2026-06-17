@@ -18,6 +18,14 @@ arch('result data transfer objects are final')
     ->expect('RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results')
     ->toBeFinal();
 
+arch('result data transfer objects serialize to json')
+    ->expect('RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results')
+    ->toImplement([
+        'Illuminate\Contracts\Support\Arrayable',
+        'Illuminate\Contracts\Support\Jsonable',
+        'JsonSerializable',
+    ]);
+
 arch('leaf data transfer objects are final')
     ->expect([
         'RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade',
