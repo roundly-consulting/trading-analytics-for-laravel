@@ -4,20 +4,23 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\TradingAnalytics;
 
-use Acme\LaravelPackageTools\Package;
-use Acme\LaravelPackageTools\PackageServiceProvider;
+use Illuminate\Support\ServiceProvider;
 
-final class TradingAnalyticsServiceProvider extends PackageServiceProvider
+final class TradingAnalyticsServiceProvider extends ServiceProvider
 {
-    public function configurePackage(Package $package): void
+    public function register(): void
     {
-        $package
-            ->name('trading-analytics')
-            ->hasConfigFile();
+        $this->mergeConfigFrom(__DIR__.'/../config/trading-analytics.php', 'trading-analytics');
+
+        $this->app->singleton('trading-analytics', fn (): AnalyticsFactory => new AnalyticsFactory);
     }
 
-    public function packageRegistered(): void
+    public function boot(): void
     {
-        $this->app->singleton('trading-analytics', fn (): AnalyticsFactory => new AnalyticsFactory);
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__.'/../config/trading-analytics.php' => config_path('trading-analytics.php'),
+            ], 'trading-analytics-config');
+        }
     }
 }
