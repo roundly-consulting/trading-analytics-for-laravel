@@ -11,7 +11,9 @@ final class TradingAnalyticsServiceProvider extends PackageServiceProvider
 {
     public function configurePackage(Package $package): void
     {
-        $package->name('trading-analytics');
+        $package
+            ->name('trading-analytics')
+            ->hasConfigFile();
     }
 
     public function packageRegistered(): void
