@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects;
 
+use RoundlyConsulting\TradingAnalytics\Exceptions\DivisionByZeroException;
+use RoundlyConsulting\TradingAnalytics\Exceptions\InvalidNumericOperationException;
 use RoundlyConsulting\TradingAnalytics\Traits\HasPrefix;
 use RoundlyConsulting\TradingAnalytics\Traits\HasScale;
 use RoundlyConsulting\TradingAnalytics\Traits\HasSuffix;
 use Stringable;
 
-class NumericValueAsString implements Stringable
+final class NumericValueAsString implements Stringable
 {
     use HasPrefix;
     use HasScale;
@@ -66,14 +68,26 @@ class NumericValueAsString implements Stringable
 
     public function divide(string|int|float|NumericValueAsString $value, bool $immutable = false): self
     {
-        $result = bcdiv($this->value, $this->value($value), $this->scale);
+        $divisor = $this->value($value);
+
+        if (bccomp($divisor, '0', $this->scale) === 0) {
+            throw DivisionByZeroException::make();
+        }
+
+        $result = bcdiv($this->value, $divisor, $this->scale);
 
         return $this->resolveMutation($result, $immutable, true);
     }
 
     public function pow(string|int|float $exponent, bool $immutable = false): self
     {
-        $result = bcpow($this->value, $this->value($exponent), $this->scale);
+        $normalized = $this->value($exponent);
+
+        if (bccomp($normalized, bcadd($normalized, '0', 0), $this->scale) !== 0) {
+            throw InvalidNumericOperationException::fractionalExponent((string) $exponent);
+        }
+
+        $result = bcpow($this->value, $normalized, $this->scale);
 
         return $this->resolveMutation($result, $immutable, true);
     }
@@ -89,7 +103,7 @@ class NumericValueAsString implements Stringable
 
     public function isNonZero(): bool
     {
-        return $this->isGreaterThan(0);
+        return ! $this->isZero();
     }
 
     public function isZero(): bool
@@ -147,13 +161,32 @@ class NumericValueAsString implements Stringable
 
     public function round(int $scale): self
     {
+        $rounded = $this->roundValue($this->value, $scale);
+
         $this->scale($scale);
 
-        $value = $this->value($this->value);
+        return $this->resolveMutation($rounded);
+    }
 
-        return $this->resolveMutation(
-            $value,
-        );
+    /**
+     * Round a numeric string half away from zero to the given scale.
+     *
+     * bcmath only ever truncates, so we shift a signed 0.5-at-scale increment
+     * into the value before truncating to make the rounding direction correct.
+     *
+     * @param  numeric-string  $value
+     * @return numeric-string
+     */
+    protected function roundValue(string $value, int $scale): string
+    {
+        $half = bcdiv('1', bcpow('10', (string) $scale, $scale + 1), $scale + 1);
+        $half = bcdiv($half, '2', $scale + 1);
+
+        $signedHalf = bccomp($value, '0', $scale + 1) < 0
+            ? bcmul($half, '-1', $scale + 1)
+            : $half;
+
+        return bcadd(bcadd($value, $signedHalf, $scale + 1), '0', $scale);
     }
 
     public function wasChanged(): bool
@@ -207,6 +240,7 @@ class NumericValueAsString implements Stringable
         return implode(' ', $string);
     }
 
+    /** @return numeric-string */
     public function toRawString(): string
     {
         return $this->value;
@@ -234,8 +268,10 @@ class NumericValueAsString implements Stringable
     {
         $value = $value instanceof NumericValueAsString ? $value->toRawString() : (string) $value;
 
-        $numeric = is_numeric($value) ? $value : '0';
+        if (! is_numeric($value)) {
+            throw InvalidNumericOperationException::nonNumericValue($value);
+        }
 
-        return bcadd($numeric, '0', $this->scale);
+        return bcadd($value, '0', $this->scale);
     }
 }
