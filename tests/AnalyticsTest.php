@@ -157,15 +157,21 @@ it('runs instance per-trade and after-trades hooks', function (LazyCollection $t
 
 it('keeps the deprecated static hooks working', function (LazyCollection $trades) {
     $perTradeCalculators = [];
+    $afterTradesCalculators = [];
 
     Analytics::calculatePerTradeUsing(function (Analytics $analytics, string $calculator, Trade $trade) use (&$perTradeCalculators) {
         $perTradeCalculators[class_basename($calculator)] = 1;
     });
 
+    Analytics::calculateAfterTradesUsing(function (Analytics $analytics, string $calculator) use (&$afterTradesCalculators) {
+        $afterTradesCalculators[class_basename($calculator)] = 2;
+    });
+
     try {
         (new Analytics($trades))->calculate();
 
-        expect($perTradeCalculators)->not->toBeEmpty();
+        expect($perTradeCalculators)->not->toBeEmpty()
+            ->and($afterTradesCalculators)->not->toBeEmpty();
     } finally {
         Analytics::calculatePerTradesNormally();
         Analytics::calculateAfterTradesNormally();

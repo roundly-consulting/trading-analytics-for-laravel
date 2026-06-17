@@ -2,8 +2,12 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\LazyCollection;
+use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
+use RoundlyConsulting\TradingAnalytics\Enums\Direction;
+use RoundlyConsulting\TradingAnalytics\Exceptions\InvalidTradeException;
 
 it('returns correctly pair', function (LazyCollection $trades) {
     /** @var Trade $trade */
@@ -102,3 +106,65 @@ it('returns trade as array', function (LazyCollection $trades) {
     ]);
 
 })->with('closed-with-returns-40-20-15');
+
+it('rejects an empty base or quote currency', function (string $base, string $quote) {
+    expect(fn () => new Trade(
+        baseCurrency: $base,
+        quoteCurrency: $quote,
+        openPrice: new NumericValueAsString('1'),
+        closePrice: new NumericValueAsString('2'),
+        size: new NumericValueAsString('1'),
+        direction: Direction::BUY,
+        openTime: Carbon::create(2024, 1, 1, 12),
+    ))->toThrow(InvalidTradeException::class);
+})->with([
+    ['', 'USD'],
+    ['  ', 'USD'],
+    ['BTC', ''],
+    ['BTC', '   '],
+]);
+
+it('rejects a close time before the open time', function () {
+    expect(fn () => new Trade(
+        baseCurrency: 'BTC',
+        quoteCurrency: 'USD',
+        openPrice: new NumericValueAsString('1'),
+        closePrice: new NumericValueAsString('2'),
+        size: new NumericValueAsString('1'),
+        direction: Direction::BUY,
+        openTime: Carbon::create(2024, 1, 1, 12),
+        closeTime: Carbon::create(2024, 1, 1, 11),
+    ))->toThrow(InvalidTradeException::class);
+});
+
+it('constructs a valid open trade with all defaults', function () {
+    $trade = new Trade(
+        baseCurrency: 'BTC',
+        quoteCurrency: 'USD',
+        openPrice: new NumericValueAsString('1'),
+        closePrice: new NumericValueAsString('2'),
+        size: new NumericValueAsString('1'),
+        direction: Direction::BUY,
+        openTime: Carbon::create(2024, 1, 1, 12),
+    );
+
+    expect($trade)
+        ->isOpen()->toBeTrue()
+        ->isRealized()->toBeFalse()
+        ->and($trade->commission)->toBeNull();
+});
+
+it('constructs a valid realized trade', function () {
+    $trade = new Trade(
+        baseCurrency: 'BTC',
+        quoteCurrency: 'USD',
+        openPrice: new NumericValueAsString('1'),
+        closePrice: new NumericValueAsString('2'),
+        size: new NumericValueAsString('1'),
+        direction: Direction::BUY,
+        openTime: Carbon::create(2024, 1, 1, 12),
+        closeTime: Carbon::create(2024, 1, 1, 13),
+    );
+
+    expect($trade->isRealized())->toBeTrue();
+});
