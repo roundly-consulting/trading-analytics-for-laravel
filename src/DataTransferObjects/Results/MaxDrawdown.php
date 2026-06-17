@@ -4,10 +4,17 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results;
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
+use JsonSerializable;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
+use RoundlyConsulting\TradingAnalytics\Traits\SerializesToJson;
 
-final class MaxDrawdown
+/** @implements Arrayable<string, mixed> */
+final class MaxDrawdown implements Arrayable, Jsonable, JsonSerializable
 {
+    use SerializesToJson;
+
     /** Running cumulative realized equity (sum of net P&L). */
     public NumericValueAsString $equity;
 

@@ -4,8 +4,16 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects;
 
-final class NumericAggregates
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
+use JsonSerializable;
+use RoundlyConsulting\TradingAnalytics\Traits\SerializesToJson;
+
+/** @implements Arrayable<string, mixed> */
+final class NumericAggregates implements Arrayable, Jsonable, JsonSerializable
 {
+    use SerializesToJson;
+
     public NumericValueAsString $total;
 
     public NumericValueAsString $average;

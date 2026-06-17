@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects;
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
+use JsonSerializable;
 use RoundlyConsulting\TradingAnalytics\Traits\HasScale;
+use RoundlyConsulting\TradingAnalytics\Traits\SerializesToJson;
 
-class NumericByCurrency
+/** @implements Arrayable<string, mixed> */
+class NumericByCurrency implements Arrayable, Jsonable, JsonSerializable
 {
     use HasScale;
+    use SerializesToJson;
 
     public NumericValueAsString $total;
 

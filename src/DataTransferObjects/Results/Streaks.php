@@ -4,10 +4,17 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results;
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
+use JsonSerializable;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalByCurrency;
+use RoundlyConsulting\TradingAnalytics\Traits\SerializesToJson;
 
-final class Streaks
+/** @implements Arrayable<string, mixed> */
+final class Streaks implements Arrayable, Jsonable, JsonSerializable
 {
+    use SerializesToJson;
+
     public NumericDirectionalByCurrency $wins;
 
     public NumericDirectionalByCurrency $losses;

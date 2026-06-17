@@ -4,8 +4,16 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects;
 
-class NumericDirectionalByCurrency
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
+use JsonSerializable;
+use RoundlyConsulting\TradingAnalytics\Traits\SerializesToJson;
+
+/** @implements Arrayable<string, mixed> */
+class NumericDirectionalByCurrency implements Arrayable, Jsonable, JsonSerializable
 {
+    use SerializesToJson;
+
     public NumericByDirections $global;
 
     /** @var array<string, NumericByDirections> */

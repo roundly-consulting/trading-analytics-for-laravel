@@ -4,11 +4,18 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results;
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
+use JsonSerializable;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
 use RoundlyConsulting\TradingAnalytics\Enums\Period;
+use RoundlyConsulting\TradingAnalytics\Traits\SerializesToJson;
 
-final class WinRateByPeriod
+/** @implements Arrayable<string, mixed> */
+final class WinRateByPeriod implements Arrayable, Jsonable, JsonSerializable
 {
+    use SerializesToJson;
+
     /** @var array<string, int> */
     public array $wins = [];
 

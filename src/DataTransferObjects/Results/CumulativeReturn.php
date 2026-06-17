@@ -4,10 +4,17 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results;
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
+use JsonSerializable;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalAggregatesByCurrency;
+use RoundlyConsulting\TradingAnalytics\Traits\SerializesToJson;
 
-final class CumulativeReturn
+/** @implements Arrayable<string, mixed> */
+final class CumulativeReturn implements Arrayable, Jsonable, JsonSerializable
 {
+    use SerializesToJson;
+
     public NumericDirectionalAggregatesByCurrency $gross;
 
     public NumericDirectionalAggregatesByCurrency $net;
