@@ -168,3 +168,162 @@ it('constructs a valid realized trade', function () {
 
     expect($trade->isRealized())->toBeTrue();
 });
+
+it('builds a trade from scalars via make', function () {
+    $trade = Trade::make(
+        baseCurrency: 'BTC',
+        quoteCurrency: 'USD',
+        openPrice: '45000',
+        closePrice: '45500',
+        size: '0.1',
+        direction: Direction::BUY,
+        openTime: Carbon::create(2024, 1, 1, 12),
+        commission: 15,
+        closeTime: Carbon::create(2024, 1, 1, 14),
+    );
+
+    expect($trade)
+        ->toBeInstanceOf(Trade::class)
+        ->and($trade->openPrice)->toBeInstanceOf(NumericValueAsString::class)
+        ->and($trade->openPrice->toRawString())->toBe('45000.0000000000')
+        ->and($trade->commission)->toBeInstanceOf(NumericValueAsString::class)
+        ->and($trade->isRealized())->toBeTrue();
+});
+
+it('parses a string direction and time through make', function () {
+    $trade = Trade::make(
+        baseCurrency: 'BTC',
+        quoteCurrency: 'USD',
+        openPrice: '1',
+        closePrice: '2',
+        size: '1',
+        direction: 'sell',
+        openTime: '2024-01-01 12:00:00',
+    );
+
+    expect($trade->direction)->toBe(Direction::SELL)
+        ->and($trade->openTime->toDateTimeString())->toBe('2024-01-01 12:00:00')
+        ->and($trade->commission)->toBeNull()
+        ->and($trade->isOpen())->toBeTrue();
+});
+
+it('builds a trade from an array', function () {
+    $trade = Trade::fromArray([
+        'base_currency' => 'ETH',
+        'quote_currency' => 'USD',
+        'open_price' => '3000',
+        'close_price' => '3200',
+        'size' => '1.5',
+        'direction' => 'buy',
+        'open_time' => '2024-02-10 09:15:00',
+        'commission' => '10',
+        'close_time' => '2024-02-10 10:00:00',
+    ]);
+
+    expect($trade)
+        ->toBeInstanceOf(Trade::class)
+        ->and($trade->pair())->toBe('ETH/USD')
+        ->and($trade->direction)->toBe(Direction::BUY)
+        ->and($trade->isRealized())->toBeTrue();
+});
+
+it('throws when a required array key is missing', function (string $missing) {
+    $attributes = [
+        'base_currency' => 'BTC',
+        'quote_currency' => 'USD',
+        'open_price' => '1',
+        'close_price' => '2',
+        'size' => '1',
+        'direction' => 'buy',
+        'open_time' => '2024-01-01 12:00:00',
+    ];
+
+    unset($attributes[$missing]);
+
+    expect(fn () => Trade::fromArray($attributes))
+        ->toThrow(InvalidTradeException::class, "missing the required '{$missing}'");
+})->with([
+    'base_currency',
+    'quote_currency',
+    'open_price',
+    'close_price',
+    'size',
+    'direction',
+    'open_time',
+]);
+
+it('throws on an invalid direction string', function () {
+    expect(fn () => Trade::make(
+        baseCurrency: 'BTC',
+        quoteCurrency: 'USD',
+        openPrice: '1',
+        closePrice: '2',
+        size: '1',
+        direction: 'long',
+        openTime: Carbon::create(2024, 1, 1, 12),
+    ))->toThrow(InvalidTradeException::class, 'not a valid trade direction');
+});
+
+it('lazily collects rows into trades', function () {
+    $collection = Trade::collect([
+        [
+            'base_currency' => 'BTC',
+            'quote_currency' => 'USD',
+            'open_price' => '45000',
+            'close_price' => '45500',
+            'size' => '0.1',
+            'direction' => 'buy',
+            'open_time' => '2024-01-01 12:00:00',
+        ],
+        Trade::make(
+            baseCurrency: 'ETH',
+            quoteCurrency: 'USD',
+            openPrice: '3000',
+            closePrice: '3200',
+            size: '1',
+            direction: Direction::SELL,
+            openTime: Carbon::create(2024, 1, 2, 12),
+        ),
+    ]);
+
+    expect($collection)->toBeInstanceOf(LazyCollection::class);
+
+    $trades = $collection->all();
+
+    expect($trades)->toHaveCount(2)
+        ->and($trades[0])->toBeInstanceOf(Trade::class)
+        ->and($trades[0]->pair())->toBe('BTC/USD')
+        ->and($trades[1])->toBeInstanceOf(Trade::class)
+        ->and($trades[1]->pair())->toBe('ETH/USD');
+});
+
+it('still validates currencies and close-before-open through the named constructors', function () {
+    expect(fn () => Trade::make(
+        baseCurrency: '',
+        quoteCurrency: 'USD',
+        openPrice: '1',
+        closePrice: '2',
+        size: '1',
+        direction: Direction::BUY,
+        openTime: Carbon::create(2024, 1, 1, 12),
+    ))->toThrow(InvalidTradeException::class);
+
+    expect(fn () => Trade::fromArray([
+        'base_currency' => 'BTC',
+        'quote_currency' => 'USD',
+        'open_price' => '1',
+        'close_price' => '2',
+        'size' => '1',
+        'direction' => 'buy',
+        'open_time' => '2024-01-01 12:00:00',
+        'close_time' => '2024-01-01 11:00:00',
+    ]))->toThrow(InvalidTradeException::class, 'close time cannot be before');
+});
+
+it('serializes a trade to json', function (LazyCollection $trades) {
+    /** @var Trade $trade */
+    $trade = $trades->first();
+
+    expect($trade->toJson())->toBe(json_encode($trade->toArray()))
+        ->and(json_encode($trade))->toBe($trade->toJson());
+})->with('closed-with-returns-40-20-15');

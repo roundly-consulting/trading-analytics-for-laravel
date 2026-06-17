@@ -4,12 +4,20 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects;
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\LazyCollection;
+use JsonSerializable;
 use RoundlyConsulting\TradingAnalytics\Enums\Direction;
 use RoundlyConsulting\TradingAnalytics\Exceptions\InvalidTradeException;
+use RoundlyConsulting\TradingAnalytics\Traits\SerializesToJson;
 
-final class Trade
+/** @implements Arrayable<string, mixed> */
+final class Trade implements Arrayable, Jsonable, JsonSerializable
 {
+    use SerializesToJson;
+
     public function __construct(
         public string $baseCurrency,
         public string $quoteCurrency,
@@ -32,6 +40,108 @@ final class Trade
         if ($this->closeTime !== null && $this->closeTime->lessThan($this->openTime)) {
             throw InvalidTradeException::closeBeforeOpen();
         }
+    }
+
+    /**
+     * Build a trade from scalar values, wrapping the numeric fields in
+     * {@see NumericValueAsString} for the caller so they never type
+     * `new NumericValueAsString(...)` by hand.
+     */
+    public static function make(
+        string $baseCurrency,
+        string $quoteCurrency,
+        string|int|float|NumericValueAsString $openPrice,
+        string|int|float|NumericValueAsString $closePrice,
+        string|int|float|NumericValueAsString $size,
+        Direction|string $direction,
+        Carbon|string $openTime,
+        string|int|float|NumericValueAsString|null $commission = null,
+        Carbon|string|null $closeTime = null,
+    ): self {
+        return new self(
+            baseCurrency: $baseCurrency,
+            quoteCurrency: $quoteCurrency,
+            openPrice: NumericValueAsString::of($openPrice),
+            closePrice: NumericValueAsString::of($closePrice),
+            size: NumericValueAsString::of($size),
+            direction: self::parseDirection($direction),
+            openTime: $openTime instanceof Carbon ? $openTime : Carbon::parse($openTime),
+            commission: $commission === null ? null : NumericValueAsString::of($commission),
+            closeTime: self::parseNullableTime($closeTime),
+        );
+    }
+
+    /**
+     * Ingestion boundary: build a trade from a row of scalars (e.g. a database
+     * record or API payload). Internals stay strictly DTO-typed; this method is
+     * the documented array entry point.
+     *
+     * @param array{
+     *     base_currency: string,
+     *     quote_currency: string,
+     *     open_price: string|int|float,
+     *     close_price: string|int|float,
+     *     size: string|int|float,
+     *     direction: string|Direction,
+     *     open_time: string|Carbon,
+     *     commission?: string|int|float|null,
+     *     close_time?: string|Carbon|null
+     * } $attributes
+     */
+    public static function fromArray(array $attributes): self
+    {
+        foreach (['base_currency', 'quote_currency', 'open_price', 'close_price', 'size', 'direction', 'open_time'] as $required) {
+            if (! array_key_exists($required, $attributes)) {
+                throw InvalidTradeException::missingField($required);
+            }
+        }
+
+        return self::make(
+            baseCurrency: $attributes['base_currency'],
+            quoteCurrency: $attributes['quote_currency'],
+            openPrice: $attributes['open_price'],
+            closePrice: $attributes['close_price'],
+            size: $attributes['size'],
+            direction: $attributes['direction'],
+            openTime: $attributes['open_time'],
+            commission: $attributes['commission'] ?? null,
+            closeTime: $attributes['close_time'] ?? null,
+        );
+    }
+
+    /**
+     * Lazily map an iterable of rows (arrays or trades) into trades, so
+     * `Analytics::make(Trade::collect($query->lazy()))` is a one-liner.
+     *
+     * @param  iterable<int, array{base_currency: string, quote_currency: string, open_price: string|int|float, close_price: string|int|float, size: string|int|float, direction: string|Direction, open_time: string|Carbon, commission?: string|int|float|null, close_time?: string|Carbon|null}|Trade>  $rows
+     * @return LazyCollection<int, Trade>
+     */
+    public static function collect(iterable $rows): LazyCollection
+    {
+        return LazyCollection::make(static function () use ($rows): iterable {
+            foreach ($rows as $row) {
+                yield $row instanceof self ? $row : self::fromArray($row);
+            }
+        });
+    }
+
+    private static function parseDirection(Direction|string $direction): Direction
+    {
+        if ($direction instanceof Direction) {
+            return $direction;
+        }
+
+        return Direction::tryFrom($direction)
+            ?? throw InvalidTradeException::invalidDirection($direction);
+    }
+
+    private static function parseNullableTime(Carbon|string|null $time): ?Carbon
+    {
+        if ($time === null) {
+            return null;
+        }
+
+        return $time instanceof Carbon ? $time : Carbon::parse($time);
     }
 
     public function pair(): string

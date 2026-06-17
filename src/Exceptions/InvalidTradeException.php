@@ -15,4 +15,14 @@ final class InvalidTradeException extends TradingAnalyticsException
     {
         return new self("A trade's close time cannot be before its open time.");
     }
+
+    public static function missingField(string $field): self
+    {
+        return new self("A trade is missing the required '{$field}' field.");
+    }
+
+    public static function invalidDirection(string $value): self
+    {
+        return new self("'{$value}' is not a valid trade direction; expected one of: buy, sell.");
+    }
 }
