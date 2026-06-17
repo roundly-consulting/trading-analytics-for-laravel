@@ -20,21 +20,100 @@ no floating-point drift.
 composer require roundly-consulting/trading-analytics-for-laravel
 ```
 
-The service provider is auto-discovered. The package ships **no** config file, migrations, views,
-or commands — it is a calculation library you use directly in your own code.
+The service provider is auto-discovered. The package ships no migrations, views, or commands —
+it is a calculation library you use directly in your own code.
+
+Optionally publish the config file to change the default precision or win-rate period:
+
+```bash
+php artisan vendor:publish --tag="trading-analytics-config"
+```
+
+## Configuration
+
+The package works with zero configuration; publishing the config file only lets you change the
+defaults in one place. `config/trading-analytics.php`:
+
+```php
+return [
+    // Default decimal precision (bcmath scale) for every calculation.
+    'scale' => (int) env('TRADING_ANALYTICS_SCALE', 10),
+
+    // Default win-rate bucketing period: daily, weekly, or monthly.
+    'win_rate_period' => env('TRADING_ANALYTICS_WIN_RATE_PERIOD', 'daily'),
+];
+```
+
+| Key | Type | Default | Env var | Purpose |
+|---|---|---|---|---|
+| `scale` | `int` | `10` | `TRADING_ANALYTICS_SCALE` | Decimal places used when a run does not call `->scale()`. |
+| `win_rate_period` | `string` | `daily` | `TRADING_ANALYTICS_WIN_RATE_PERIOD` | Win-rate bucket when a run does not call `->usingWinRatePeriod()`. An unrecognised value falls back to `daily`. |
+
+A run's explicit `->scale(...)` / `->usingWinRatePeriod(...)` always overrides the configured
+default. Outside a booted Laravel app (no config bound), the built-in defaults (`scale` 10,
+`daily`) apply automatically.
 
 ## Usage
 
 ### Building trades
 
-A `Trade` is an immutable value object. Currencies must be non-empty and, for a realized trade,
-the close time must not be before the open time — otherwise an `InvalidTradeException` is thrown.
+A `Trade` is an immutable value object. The quickest way to build one is `Trade::make()`, which
+takes plain scalars and wraps the numeric fields for you:
 
 ```php
 use Illuminate\Support\Carbon;
-use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 use RoundlyConsulting\TradingAnalytics\Enums\Direction;
+
+$trade = Trade::make(
+    baseCurrency: 'BTC',
+    quoteCurrency: 'USD',
+    openPrice: '45000.00',
+    closePrice: '45500.00',
+    size: '0.1',
+    direction: Direction::BUY,        // or the string 'buy' / 'sell'
+    openTime: Carbon::create(2024, 1, 15, 12, 30), // or a parseable date string
+    commission: '15.00',              // optional
+    closeTime: Carbon::create(2024, 1, 15, 14, 30), // omit for an open position
+);
+```
+
+Building from an array (e.g. a database row or API payload) is the documented ingestion boundary:
+
+```php
+$trade = Trade::fromArray([
+    'base_currency' => 'BTC',
+    'quote_currency' => 'USD',
+    'open_price' => '45000.00',
+    'close_price' => '45500.00',
+    'size' => '0.1',
+    'direction' => 'buy',
+    'open_time' => '2024-01-15 12:30:00',
+    'commission' => '15.00',          // optional
+    'close_time' => '2024-01-15 14:30:00', // optional
+]);
+```
+
+A missing required key throws `InvalidTradeException`, as does an unknown `direction`. Currencies
+must be non-empty and a realized trade's close time must not be before its open time.
+
+Stream trades lazily from the database with `Trade::collect()` so the whole history never sits in
+memory at once:
+
+```php
+$trades = Trade::collect(
+    DB::table('trades')->lazy() // each row is the array shape shown above
+);
+
+$analytics = Analytics::make($trades)->calculate();
+```
+
+`Trade::collect()` also accepts already-built `Trade` instances and mixes both freely.
+
+For full control you can still construct a `Trade` directly with `NumericValueAsString` fields:
+
+```php
+use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
 
 $trade = new Trade(
     baseCurrency: 'BTC',
@@ -44,23 +123,7 @@ $trade = new Trade(
     size: new NumericValueAsString('0.1'),
     direction: Direction::BUY,
     openTime: Carbon::create(2024, 1, 15, 12, 30),
-    commission: new NumericValueAsString('15.00'), // optional
-    closeTime: Carbon::create(2024, 1, 15, 14, 30), // omit for an open position
 );
-```
-
-Stream trades lazily from the database so the whole history never sits in memory at once:
-
-```php
-use Illuminate\Support\LazyCollection;
-
-$trades = Trade::query()->lazy()->map(fn ($row) => new Trade(/* ... */));
-
-// or build them with a generator
-$trades = LazyCollection::make(function () {
-    yield new Trade(/* ... */);
-    yield new Trade(/* ... */);
-});
 ```
 
 ### Running the engine
@@ -98,7 +161,12 @@ $analytics = Analytics::make($trades)->only([Counts::class])->calculate();
 $analytics = Analytics::make($trades)->except([Streaks::class])->calculate();
 ```
 
-Passing a class that is not a registered calculator throws an `UnknownCalculatorException`.
+Passing a class that is not a registered calculator throws an `UnknownCalculatorException`. To
+discover what `only()` / `except()` accept, call `metrics()`:
+
+```php
+$available = Analytics::make($trades)->metrics(); // list of calculator class-strings
+```
 
 ## Result accessors
 
@@ -140,6 +208,26 @@ $analytics->riskAdjustedReturns->sharpeRatio;
 $analytics->riskAdjustedReturns->sortinoRatio;
 ```
 
+### JSON & API responses
+
+The `Analytics` instance and every result object implement Laravel's `Arrayable` and `Jsonable`
+contracts plus PHP's `JsonSerializable`, so they drop straight into API responses:
+
+```php
+// In a controller — returns the full result matrix as JSON
+return $analytics;
+
+// Or explicitly
+return response()->json($analytics);
+
+$analytics->toArray();   // nested array
+$analytics->toJson();    // JSON string
+json_encode($analytics); // same payload via JsonSerializable
+```
+
+Each individual result (e.g. `$analytics->expectancy`, `$analytics->counts`) and the
+`NumericValueAsString` value object serialize the same way.
+
 ### Win rate by period
 
 ```php
@@ -154,15 +242,23 @@ $analytics->winRateByPeriod->rates; // ['2024-01' => '0.6666', ...]
 
 ### Working with `NumericValueAsString`
 
-All numeric results are `NumericValueAsString` value objects backed by a precise `bcmath` string:
+All numeric results are `NumericValueAsString` value objects backed by a precise `bcmath` string.
+Build one with the `::of()` named constructor (cleaner than `new`):
 
 ```php
-$value = new NumericValueAsString('1.005', scale: 2);
+$value = NumericValueAsString::of('1.005', scale: 2);
 
 $value->add(1)->subtract('0.5')->multiply(2); // chainable bcmath operations
 $value->round(2)->toRawString();              // '1.01' — true half-away-from-zero rounding
 (string) $value;                              // formatted, with optional prefix/suffix
 $value->toFloat();                            // float, when you explicitly want one
+```
+
+Format a result for display without mutating the stored value using the immutable `withPrefix()` /
+`withSuffix()` helpers, which return a new instance:
+
+```php
+$analytics->commission->global->total->withPrefix('$')->toString(); // '$ 25.00'
 ```
 
 Dividing by zero throws a `DivisionByZeroException`, passing a non-numeric string throws an
@@ -193,7 +289,7 @@ series for variance); the single-pass aggregate calculators stay free of that co
 Every exception extends `RoundlyConsulting\TradingAnalytics\Exceptions\TradingAnalyticsException`,
 so you can catch them all with one `catch`:
 
-- `InvalidTradeException` — empty currency or close-before-open.
+- `InvalidTradeException` — empty currency, close-before-open, a missing required array key, or an invalid direction.
 - `InvalidScaleException` — negative scale.
 - `InvalidNumericOperationException` — non-numeric input or a fractional `pow()` exponent.
 - `DivisionByZeroException` — division by zero.
