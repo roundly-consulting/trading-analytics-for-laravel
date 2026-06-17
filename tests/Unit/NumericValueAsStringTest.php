@@ -128,3 +128,42 @@ it('exposes the value as an array', function () {
         'formatted' => '$ 5.00',
     ]);
 });
+
+it('builds a numeric value via of', function () {
+    expect(NumericValueAsString::of('1.5', scale: 2)->toRawString())
+        ->toBe((new NumericValueAsString('1.5', 2))->toRawString())
+        ->and(NumericValueAsString::of('1.5', scale: 2)->toRawString())->toBe('1.50');
+});
+
+it('accepts a numeric value object in of', function () {
+    $original = NumericValueAsString::of('7.25', scale: 2);
+
+    expect(NumericValueAsString::of($original, scale: 2)->toRawString())->toBe('7.25');
+});
+
+it('returns a prefixed clone without mutating the original', function () {
+    $value = NumericValueAsString::of('5.00', scale: 2, suffix: 'USD');
+
+    $prefixed = $value->withPrefix('$');
+
+    expect($prefixed)->not->toBe($value)
+        ->and($prefixed->toString())->toBe('$ 5.00 USD')
+        ->and($value->toString())->toBe('5.00 USD');
+});
+
+it('returns a suffixed clone without mutating the original', function () {
+    $value = NumericValueAsString::of('5.00', scale: 2, prefix: '$');
+
+    $suffixed = $value->withSuffix('USD');
+
+    expect($suffixed)->not->toBe($value)
+        ->and($suffixed->toString())->toBe('$ 5.00 USD')
+        ->and($value->toString())->toBe('$ 5.00');
+});
+
+it('serializes a numeric value to json', function () {
+    $value = NumericValueAsString::of('5.00', scale: 2, prefix: '$');
+
+    expect($value->toJson())->toBe(json_encode($value->toArray()))
+        ->and(json_encode($value))->toBe($value->toJson());
+});

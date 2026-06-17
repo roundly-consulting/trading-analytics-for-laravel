@@ -8,7 +8,7 @@ trait HasPrefix
 {
     public string $prefix = '';
 
-    public function prefix(string $prefix): self
+    public function prefix(string $prefix): static
     {
         $this->prefix = $prefix;
 

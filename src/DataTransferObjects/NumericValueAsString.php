@@ -4,18 +4,24 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects;
 
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
+use JsonSerializable;
 use RoundlyConsulting\TradingAnalytics\Exceptions\DivisionByZeroException;
 use RoundlyConsulting\TradingAnalytics\Exceptions\InvalidNumericOperationException;
 use RoundlyConsulting\TradingAnalytics\Traits\HasPrefix;
 use RoundlyConsulting\TradingAnalytics\Traits\HasScale;
 use RoundlyConsulting\TradingAnalytics\Traits\HasSuffix;
+use RoundlyConsulting\TradingAnalytics\Traits\SerializesToJson;
 use Stringable;
 
-final class NumericValueAsString implements Stringable
+/** @implements Arrayable<string, mixed> */
+final class NumericValueAsString implements Arrayable, Jsonable, JsonSerializable, Stringable
 {
     use HasPrefix;
     use HasScale;
     use HasSuffix;
+    use SerializesToJson;
 
     /** @var numeric-string */
     protected string $value = '0.0000000000';
@@ -30,6 +36,41 @@ final class NumericValueAsString implements Stringable
             ->suffix($suffix);
 
         $this->hasBeenChanged = $hasBeenChanged;
+    }
+
+    /**
+     * Named constructor — reads cleaner than `new NumericValueAsString(...)` in
+     * consumer code and the README.
+     */
+    public static function of(string|int|float|NumericValueAsString $value = '0', int $scale = 10, string $prefix = '', string $suffix = ''): self
+    {
+        return new self(value: $value, scale: $scale, prefix: $prefix, suffix: $suffix);
+    }
+
+    /**
+     * Return a clone with the given display prefix set, leaving the original
+     * value untouched (immutable formatting helper).
+     */
+    public function withPrefix(string $prefix): self
+    {
+        $clone = $this->clone();
+        $clone->prefix($prefix);
+        $clone->suffix($this->suffix);
+
+        return $clone;
+    }
+
+    /**
+     * Return a clone with the given display suffix set, leaving the original
+     * value untouched (immutable formatting helper).
+     */
+    public function withSuffix(string $suffix): self
+    {
+        $clone = $this->clone();
+        $clone->prefix($this->prefix);
+        $clone->suffix($suffix);
+
+        return $clone;
     }
 
     public function set(string|int|float|NumericValueAsString $value, ?int $scale = null): self

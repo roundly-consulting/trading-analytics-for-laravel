@@ -8,7 +8,7 @@ trait HasSuffix
 {
     public string $suffix = '';
 
-    public function suffix(string $suffix): self
+    public function suffix(string $suffix): static
     {
         $this->suffix = $suffix;
 

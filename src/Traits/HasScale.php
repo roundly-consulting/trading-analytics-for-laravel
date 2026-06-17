@@ -10,7 +10,7 @@ trait HasScale
 {
     protected int $scale = 10;
 
-    public function scale(int $scale): self
+    public function scale(int $scale): static
     {
         if ($scale < 0) {
             throw InvalidScaleException::negative($scale);
