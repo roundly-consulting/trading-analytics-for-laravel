@@ -6,8 +6,9 @@ namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects;
 
 use Illuminate\Support\Carbon;
 use RoundlyConsulting\TradingAnalytics\Enums\Direction;
+use RoundlyConsulting\TradingAnalytics\Exceptions\InvalidTradeException;
 
-class Trade
+final class Trade
 {
     public function __construct(
         public string $baseCurrency,
@@ -19,7 +20,19 @@ class Trade
         public Carbon $openTime,
         public ?NumericValueAsString $commission = null,
         public ?Carbon $closeTime = null,
-    ) {}
+    ) {
+        if (trim($this->baseCurrency) === '') {
+            throw InvalidTradeException::emptyCurrency('base currency');
+        }
+
+        if (trim($this->quoteCurrency) === '') {
+            throw InvalidTradeException::emptyCurrency('quote currency');
+        }
+
+        if ($this->closeTime !== null && $this->closeTime->lessThan($this->openTime)) {
+            throw InvalidTradeException::closeBeforeOpen();
+        }
+    }
 
     public function pair(): string
     {
@@ -36,7 +49,7 @@ class Trade
         return ! $this->isRealized();
     }
 
-    public function profitAndLoss(bool $subtractComissions = false): NumericValueAsString
+    public function profitAndLoss(bool $subtractCommissions = false): NumericValueAsString
     {
         if ($this->direction->isBuy()) {
             $pnl = $this->closePrice->subtract(
@@ -56,7 +69,7 @@ class Trade
             );
         }
 
-        if ($subtractComissions && $this->commission) {
+        if ($subtractCommissions && $this->commission) {
             $pnl = $pnl->subtract(
                 value: $this->commission,
                 immutable: true,
@@ -66,9 +79,9 @@ class Trade
         return $pnl;
     }
 
-    public function roi(bool $subtractComissions = false, bool $asPercentage = true): NumericValueAsString
+    public function roi(bool $subtractCommissions = false, bool $asPercentage = true): NumericValueAsString
     {
-        $pnl = $this->profitAndLoss($subtractComissions);
+        $pnl = $this->profitAndLoss($subtractCommissions);
 
         $roi = $pnl->divide(
             value: $this->openPrice->multiply(
@@ -103,11 +116,11 @@ class Trade
             'is_open' => $this->isOpen(),
             'pnl' => [
                 'gross' => $this->profitAndLoss()->toString(),
-                'net' => $this->profitAndLoss(subtractComissions: true)->toString(),
+                'net' => $this->profitAndLoss(subtractCommissions: true)->toString(),
             ],
             'roi' => [
                 'gross' => $this->roi()->toString(),
-                'net' => $this->roi(subtractComissions: true)->toString(),
+                'net' => $this->roi(subtractCommissions: true)->toString(),
             ],
         ];
     }

@@ -56,15 +56,15 @@ it('calculates correctly roi', function (LazyCollection $trades) {
         ->roi(asPercentage: false)->toString()->toBe('0.4000000000')
         ->roi()->toString()->toBe('40.00')
         ->roi(true)->toString()->toBe('38.33')
-        ->roi(subtractComissions: true, asPercentage: false)->toString()->toBe('0.3833330000');
+        ->roi(subtractCommissions: true, asPercentage: false)->toString()->toBe('0.3833330000');
 
     $trade = $trades->get(1);
 
     expect($trade)
         ->roi(asPercentage: false)->toString()->toBe('0.2000000000')
         ->roi()->toString()->toBe('20.00')
-        ->roi(true)->toString()->toBe('18.76')
-        ->roi(subtractComissions: true, asPercentage: false)->toString()->toBe('0.1876665333');
+        ->roi(true)->toString()->toBe('18.77')
+        ->roi(subtractCommissions: true, asPercentage: false)->toString()->toBe('0.1876665333');
 
     $trade = $trades->get(2);
 
@@ -72,7 +72,7 @@ it('calculates correctly roi', function (LazyCollection $trades) {
         ->roi(asPercentage: false)->toString()->toBe('0.1500000000')
         ->roi()->toString()->toBe('15.00')
         ->roi(true)->toString()->toBe('13.95')
-        ->roi(subtractComissions: true, asPercentage: false)->toString()->toBe('0.1395333000');
+        ->roi(subtractCommissions: true, asPercentage: false)->toString()->toBe('0.1395333000');
 })->with('closed-with-returns-40-20-15');
 
 it('returns trade as array', function (LazyCollection $trades) {
