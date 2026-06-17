@@ -6,7 +6,7 @@ namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results;
 
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericByCurrency;
 
-class ProfitFactor extends NumericByCurrency
+final class ProfitFactor extends NumericByCurrency
 {
     public function __construct()
     {

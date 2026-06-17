@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects;
 
-class NumericByDirections
+final class NumericByDirections
 {
     public NumericValueAsString $total;
 

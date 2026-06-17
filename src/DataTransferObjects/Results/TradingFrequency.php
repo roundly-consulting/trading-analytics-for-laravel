@@ -6,7 +6,7 @@ namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results;
 
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericByCurrency;
 
-class TradingFrequency extends NumericByCurrency
+final class TradingFrequency extends NumericByCurrency
 {
     /** @var array<string, int> */
     protected array $lastTradeTimestamp = [];

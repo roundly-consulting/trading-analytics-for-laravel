@@ -6,7 +6,7 @@ namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results;
 
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalByCurrency;
 
-class Wins extends NumericDirectionalByCurrency
+final class Wins extends NumericDirectionalByCurrency
 {
     public NumericDirectionalByCurrency $winRatio;
 

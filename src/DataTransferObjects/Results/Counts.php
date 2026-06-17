@@ -6,7 +6,7 @@ namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results;
 
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalByCurrency;
 
-class Counts extends NumericDirectionalByCurrency
+final class Counts extends NumericDirectionalByCurrency
 {
     public function __construct()
     {

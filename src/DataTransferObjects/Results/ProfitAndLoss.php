@@ -7,7 +7,7 @@ namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericByCurrency;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalAggregatesByCurrency;
 
-class ProfitAndLoss
+final class ProfitAndLoss
 {
     public NumericDirectionalAggregatesByCurrency $gross;
 

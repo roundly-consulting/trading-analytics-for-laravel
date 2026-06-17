@@ -6,7 +6,7 @@ namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results;
 
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalAggregatesByCurrency;
 
-class TradingVolume extends NumericDirectionalAggregatesByCurrency
+final class TradingVolume extends NumericDirectionalAggregatesByCurrency
 {
     //
 }

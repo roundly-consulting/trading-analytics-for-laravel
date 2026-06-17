@@ -6,7 +6,7 @@ namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results;
 
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalByCurrency;
 
-class Streaks
+final class Streaks
 {
     public NumericDirectionalByCurrency $wins;
 
