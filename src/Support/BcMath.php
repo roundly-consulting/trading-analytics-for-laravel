@@ -78,4 +78,22 @@ final class BcMath
 
         return $result;
     }
+
+    /**
+     * Square root of a non-negative value, kept in bcmath.
+     *
+     * @param  numeric-string  $value
+     * @return numeric-string
+     */
+    public static function sqrt(string $value, int $scale = 20): string
+    {
+        if (bccomp($value, '0', $scale) <= 0) {
+            return bcadd('0', '0', $scale);
+        }
+
+        /** @var numeric-string $result */
+        $result = bcsqrt($value, $scale);
+
+        return $result;
+    }
 }
