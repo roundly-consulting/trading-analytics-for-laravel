@@ -11,6 +11,7 @@ use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalAgg
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
+use RoundlyConsulting\TradingAnalytics\Support\BcMath;
 
 class GrossCumulativeReturn implements AnalyticsInterface
 {
@@ -186,10 +187,17 @@ class GrossCumulativeReturn implements AnalyticsInterface
         }
 
         $isNegative = $return->isLessThan(0);
-        $geometricMean = pow($return->abs(immutable: true)->toFloat(), 1 / $count->toInt()) - 1;
 
-        $averageCumulativeReturn = new NumericValueAsString($geometricMean);
+        // Geometric mean of the accumulated growth factors, computed entirely in
+        // bcmath so the package's arbitrary-precision guarantee is not broken.
+        $root = BcMath::nthRoot(
+            value: $return->abs(immutable: true)->toRawString(),
+            n: $count->toInt(),
+        );
 
-        return $averageCumulativeReturn->multiply($isNegative ? -100 : 100)->round(2);
+        $geometricMean = new NumericValueAsString(value: $root, scale: 20);
+        $geometricMean->subtract(1);
+
+        return $geometricMean->multiply($isNegative ? -100 : 100)->round(2);
     }
 }

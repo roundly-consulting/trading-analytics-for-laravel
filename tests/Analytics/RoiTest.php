@@ -16,7 +16,7 @@ it('correctly returns rois', function (LazyCollection $trades) {
         ->gross->toBeInstanceOf(NumericDirectionalAggregatesByCurrency::class)
         ->net->toBeInstanceOf(NumericDirectionalAggregatesByCurrency::class)
         ->gross->global->total->total->toString()->toBe('93.20')
-        ->gross->global->total->average->toString()->toBe('24.54')
+        ->gross->global->total->average->toString()->toBe('24.55')
         ->gross->global->total->highest->toString()->toBe('93.20')
         ->gross->global->total->lowest->toString()->toBe('40.00')
         ->gross->global->buy->total->toString()->toBe('68.00')
@@ -52,7 +52,7 @@ it('correctly returns rois', function (LazyCollection $trades) {
         ->gross->forPair('SHIB/EUR')->sell->highest->toString()->toBe('15.00')
         ->gross->forPair('SHIB/EUR')->sell->lowest->toString()->toBe('15.00')
         ->gross->forBaseCurrency('SHIB')->total->total->toString()->toBe('93.20')
-        ->gross->forBaseCurrency('SHIB')->total->average->toString()->toBe('24.54')
+        ->gross->forBaseCurrency('SHIB')->total->average->toString()->toBe('24.55')
         ->gross->forBaseCurrency('SHIB')->total->highest->toString()->toBe('93.20')
         ->gross->forBaseCurrency('SHIB')->total->lowest->toString()->toBe('40.00')
         ->gross->forBaseCurrency('SHIB')->buy->total->toString()->toBe('68.00')
@@ -87,12 +87,12 @@ it('correctly returns rois', function (LazyCollection $trades) {
         ->gross->forQuoteCurrency('EUR')->sell->average->toString()->toBe('15.00')
         ->gross->forQuoteCurrency('EUR')->sell->highest->toString()->toBe('15.00')
         ->gross->forQuoteCurrency('EUR')->sell->lowest->toString()->toBe('15.00')
-        ->net->global->total->total->toString()->toBe('87.21')
-        ->net->global->total->average->toString()->toBe('23.24')
-        ->net->global->total->highest->toString()->toBe('87.21')
+        ->net->global->total->total->toString()->toBe('87.22')
+        ->net->global->total->average->toString()->toBe('23.25')
+        ->net->global->total->highest->toString()->toBe('87.22')
         ->net->global->total->lowest->toString()->toBe('38.33')
         ->net->global->buy->total->toString()->toBe('64.29')
-        ->net->global->buy->average->toString()->toBe('28.17')
+        ->net->global->buy->average->toString()->toBe('28.18')
         ->net->global->buy->highest->toString()->toBe('64.29')
         ->net->global->buy->lowest->toString()->toBe('38.33')
         ->net->global->sell->total->toString()->toBe('13.95')
@@ -111,24 +111,24 @@ it('correctly returns rois', function (LazyCollection $trades) {
         ->net->forPair('SHIB/USD')->sell->average->toString()->toBe('0.00')
         ->net->forPair('SHIB/USD')->sell->highest->toString()->toBe('0.0000000000')
         ->net->forPair('SHIB/USD')->sell->lowest->toString()->toBe('0.0000000000')
-        ->net->forPair('SHIB/EUR')->total->total->toString()->toBe('35.33')
-        ->net->forPair('SHIB/EUR')->total->average->toString()->toBe('16.33')
-        ->net->forPair('SHIB/EUR')->total->highest->toString()->toBe('35.33')
-        ->net->forPair('SHIB/EUR')->total->lowest->toString()->toBe('18.76')
-        ->net->forPair('SHIB/EUR')->buy->total->toString()->toBe('18.76')
-        ->net->forPair('SHIB/EUR')->buy->average->toString()->toBe('18.76')
-        ->net->forPair('SHIB/EUR')->buy->highest->toString()->toBe('18.76')
-        ->net->forPair('SHIB/EUR')->buy->lowest->toString()->toBe('18.76')
+        ->net->forPair('SHIB/EUR')->total->total->toString()->toBe('35.34')
+        ->net->forPair('SHIB/EUR')->total->average->toString()->toBe('16.34')
+        ->net->forPair('SHIB/EUR')->total->highest->toString()->toBe('35.34')
+        ->net->forPair('SHIB/EUR')->total->lowest->toString()->toBe('18.77')
+        ->net->forPair('SHIB/EUR')->buy->total->toString()->toBe('18.77')
+        ->net->forPair('SHIB/EUR')->buy->average->toString()->toBe('18.77')
+        ->net->forPair('SHIB/EUR')->buy->highest->toString()->toBe('18.77')
+        ->net->forPair('SHIB/EUR')->buy->lowest->toString()->toBe('18.77')
         ->net->forPair('SHIB/EUR')->sell->total->toString()->toBe('13.95')
         ->net->forPair('SHIB/EUR')->sell->average->toString()->toBe('13.95')
         ->net->forPair('SHIB/EUR')->sell->highest->toString()->toBe('13.95')
         ->net->forPair('SHIB/EUR')->sell->lowest->toString()->toBe('13.95')
-        ->net->forBaseCurrency('SHIB')->total->total->toString()->toBe('87.21')
-        ->net->forBaseCurrency('SHIB')->total->average->toString()->toBe('23.24')
-        ->net->forBaseCurrency('SHIB')->total->highest->toString()->toBe('87.21')
+        ->net->forBaseCurrency('SHIB')->total->total->toString()->toBe('87.22')
+        ->net->forBaseCurrency('SHIB')->total->average->toString()->toBe('23.25')
+        ->net->forBaseCurrency('SHIB')->total->highest->toString()->toBe('87.22')
         ->net->forBaseCurrency('SHIB')->total->lowest->toString()->toBe('38.33')
         ->net->forBaseCurrency('SHIB')->buy->total->toString()->toBe('64.29')
-        ->net->forBaseCurrency('SHIB')->buy->average->toString()->toBe('28.17')
+        ->net->forBaseCurrency('SHIB')->buy->average->toString()->toBe('28.18')
         ->net->forBaseCurrency('SHIB')->buy->highest->toString()->toBe('64.29')
         ->net->forBaseCurrency('SHIB')->buy->lowest->toString()->toBe('38.33')
         ->net->forBaseCurrency('SHIB')->sell->total->toString()->toBe('13.95')
@@ -147,14 +147,14 @@ it('correctly returns rois', function (LazyCollection $trades) {
         ->net->forQuoteCurrency('USD')->sell->average->toString()->toBe('0.00')
         ->net->forQuoteCurrency('USD')->sell->highest->toString()->toBe('0.0000000000')
         ->net->forQuoteCurrency('USD')->sell->lowest->toString()->toBe('0.0000000000')
-        ->net->forQuoteCurrency('EUR')->total->total->toString()->toBe('35.33')
-        ->net->forQuoteCurrency('EUR')->total->average->toString()->toBe('16.33')
-        ->net->forQuoteCurrency('EUR')->total->highest->toString()->toBe('35.33')
-        ->net->forQuoteCurrency('EUR')->total->lowest->toString()->toBe('18.76')
-        ->net->forQuoteCurrency('EUR')->buy->total->toString()->toBe('18.76')
-        ->net->forQuoteCurrency('EUR')->buy->average->toString()->toBe('18.76')
-        ->net->forQuoteCurrency('EUR')->buy->highest->toString()->toBe('18.76')
-        ->net->forQuoteCurrency('EUR')->buy->lowest->toString()->toBe('18.76')
+        ->net->forQuoteCurrency('EUR')->total->total->toString()->toBe('35.34')
+        ->net->forQuoteCurrency('EUR')->total->average->toString()->toBe('16.34')
+        ->net->forQuoteCurrency('EUR')->total->highest->toString()->toBe('35.34')
+        ->net->forQuoteCurrency('EUR')->total->lowest->toString()->toBe('18.77')
+        ->net->forQuoteCurrency('EUR')->buy->total->toString()->toBe('18.77')
+        ->net->forQuoteCurrency('EUR')->buy->average->toString()->toBe('18.77')
+        ->net->forQuoteCurrency('EUR')->buy->highest->toString()->toBe('18.77')
+        ->net->forQuoteCurrency('EUR')->buy->lowest->toString()->toBe('18.77')
         ->net->forQuoteCurrency('EUR')->sell->total->toString()->toBe('13.95')
         ->net->forQuoteCurrency('EUR')->sell->average->toString()->toBe('13.95')
         ->net->forQuoteCurrency('EUR')->sell->highest->toString()->toBe('13.95')
@@ -164,7 +164,7 @@ it('correctly returns rois', function (LazyCollection $trades) {
                 'global' => [
                     'total' => [
                         'total' => '93.20',
-                        'average' => '24.54',
+                        'average' => '24.55',
                         'highest' => [
                             'value' => '93.20',
                             'pair' => 'SHIB/EUR',
@@ -281,7 +281,7 @@ it('correctly returns rois', function (LazyCollection $trades) {
                     'SHIB' => [
                         'total' => [
                             'total' => '93.20',
-                            'average' => '24.54',
+                            'average' => '24.55',
                             'highest' => [
                                 'value' => '93.20',
                                 'pair' => 'SHIB/EUR',
@@ -399,10 +399,10 @@ it('correctly returns rois', function (LazyCollection $trades) {
             'net' => [
                 'global' => [
                     'total' => [
-                        'total' => '87.21',
-                        'average' => '23.24',
+                        'total' => '87.22',
+                        'average' => '23.25',
                         'highest' => [
-                            'value' => '87.21',
+                            'value' => '87.22',
                             'pair' => 'SHIB/EUR',
                         ],
                         'lowest' => [
@@ -412,7 +412,7 @@ it('correctly returns rois', function (LazyCollection $trades) {
                     ],
                     'buy' => [
                         'total' => '64.29',
-                        'average' => '28.17',
+                        'average' => '28.18',
                         'highest' => [
                             'value' => '64.29',
                             'pair' => 'SHIB/EUR',
@@ -476,26 +476,26 @@ it('correctly returns rois', function (LazyCollection $trades) {
                     ],
                     'SHIB/EUR' => [
                         'total' => [
-                            'total' => '35.33',
-                            'average' => '16.33',
+                            'total' => '35.34',
+                            'average' => '16.34',
                             'highest' => [
-                                'value' => '35.33',
+                                'value' => '35.34',
                                 'pair' => 'SHIB/EUR',
                             ],
                             'lowest' => [
-                                'value' => '18.76',
+                                'value' => '18.77',
                                 'pair' => 'SHIB/EUR',
                             ],
                         ],
                         'buy' => [
-                            'total' => '18.76',
-                            'average' => '18.76',
+                            'total' => '18.77',
+                            'average' => '18.77',
                             'highest' => [
-                                'value' => '18.76',
+                                'value' => '18.77',
                                 'pair' => 'SHIB/EUR',
                             ],
                             'lowest' => [
-                                'value' => '18.76',
+                                'value' => '18.77',
                                 'pair' => 'SHIB/EUR',
                             ],
                         ],
@@ -516,10 +516,10 @@ it('correctly returns rois', function (LazyCollection $trades) {
                 'per_base_currency' => [
                     'SHIB' => [
                         'total' => [
-                            'total' => '87.21',
-                            'average' => '23.24',
+                            'total' => '87.22',
+                            'average' => '23.25',
                             'highest' => [
-                                'value' => '87.21',
+                                'value' => '87.22',
                                 'pair' => 'SHIB/EUR',
                             ],
                             'lowest' => [
@@ -529,7 +529,7 @@ it('correctly returns rois', function (LazyCollection $trades) {
                         ],
                         'buy' => [
                             'total' => '64.29',
-                            'average' => '28.17',
+                            'average' => '28.18',
                             'highest' => [
                                 'value' => '64.29',
                                 'pair' => 'SHIB/EUR',
@@ -594,26 +594,26 @@ it('correctly returns rois', function (LazyCollection $trades) {
                     ],
                     'EUR' => [
                         'total' => [
-                            'total' => '35.33',
-                            'average' => '16.33',
+                            'total' => '35.34',
+                            'average' => '16.34',
                             'highest' => [
-                                'value' => '35.33',
+                                'value' => '35.34',
                                 'pair' => 'SHIB/EUR',
                             ],
                             'lowest' => [
-                                'value' => '18.76',
+                                'value' => '18.77',
                                 'pair' => 'SHIB/EUR',
                             ],
                         ],
                         'buy' => [
-                            'total' => '18.76',
-                            'average' => '18.76',
+                            'total' => '18.77',
+                            'average' => '18.77',
                             'highest' => [
-                                'value' => '18.76',
+                                'value' => '18.77',
                                 'pair' => 'SHIB/EUR',
                             ],
                             'lowest' => [
-                                'value' => '18.76',
+                                'value' => '18.77',
                                 'pair' => 'SHIB/EUR',
                             ],
                         ],
