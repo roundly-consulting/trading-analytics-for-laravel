@@ -39,7 +39,7 @@ class Analytics
 
     public ?ProfitFactor $profitFactor = null;
 
-    public ?TradingCommissions $comission = null;
+    public ?TradingCommissions $commission = null;
 
     public ?CumulativeReturn $cumulativeReturn = null;
 
@@ -132,7 +132,7 @@ class Analytics
             'wins' => $this->wins->toArray(),
             'volume' => $this->volume->toArray(),
             'value' => $this->value->toArray(),
-            'comission' => $this->comission->toArray(),
+            'commission' => $this->commission->toArray(),
             'profit_and_loss' => [
                 'unrealized' => $this->unrealizedProfitAndLoss->toArray(),
                 'realized' => $this->realizedProfitAndLoss->toArray(),
@@ -151,7 +151,7 @@ class Analytics
         $this->wins = new Wins;
         $this->volume = new TradingVolume($this->scale);
         $this->value = new TradingValue($this->scale);
-        $this->comission = new TradingCommissions($this->scale);
+        $this->commission = new TradingCommissions($this->scale);
         $this->unrealizedProfitAndLoss = new ProfitAndLoss($this->scale);
         $this->realizedProfitAndLoss = new ProfitAndLoss($this->scale);
         $this->profitFactor = new ProfitFactor;

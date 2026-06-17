@@ -14,7 +14,7 @@ class Commissions extends BaseNumericDirectionalAggregatesByCurrencyCalculator
 {
     protected static function dto(Analytics $analytics): NumericDirectionalAggregatesByCurrency
     {
-        return $analytics->comission;
+        return $analytics->commission;
     }
 
     protected static function value(Trade $trade): NumericValueAsString

@@ -24,7 +24,7 @@ class UnrealizedNetProfitAndLoss extends UnrealizedGrossProfitAndLoss
 
     protected static function value(Trade $trade): NumericValueAsString
     {
-        return $trade->profitAndLoss(subtractComissions: true);
+        return $trade->profitAndLoss(subtractCommissions: true);
     }
 
     protected static function dtoForProfits(Analytics $analytics): NumericByCurrency

@@ -7,13 +7,13 @@ use RoundlyConsulting\TradingAnalytics\Analytics;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalAggregates;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results\TradingCommissions;
 
-it('correctly returns mixed comissions', function (LazyCollection $trades) {
+it('correctly returns mixed commissions', function (LazyCollection $trades) {
     $analytics = new Analytics($trades);
     $analytics->calculate();
 
-    $comission = $analytics->comission;
+    $commission = $analytics->commission;
 
-    expect($comission)
+    expect($commission)
         ->toBeInstanceOf(TradingCommissions::class)
         ->global->toBeInstanceOf(NumericDirectionalAggregates::class)
         ->global->total->total->toString()->toBe('2132.0000000000')
@@ -358,9 +358,9 @@ it('correctly returns highest and lowest pairs', function (LazyCollection $trade
     $analytics = new Analytics($trades);
     $analytics->calculate();
 
-    $comission = $analytics->comission->toArray();
+    $commission = $analytics->commission->toArray();
 
-    expect($comission['global']['total'])
+    expect($commission['global']['total'])
         ->toBe([
             'total' => '31.5000000000',
             'average' => '10.5000000000',
@@ -375,11 +375,11 @@ it('correctly returns highest and lowest pairs', function (LazyCollection $trade
         ]);
 })->with('different-highest-and-lowest');
 
-it('correctly returns comissions for only closed trades', function (LazyCollection $trades) {
+it('correctly returns commissions for only closed trades', function (LazyCollection $trades) {
     $analytics = new Analytics($trades);
     $analytics->calculate();
 
-    expect($analytics->comission->toArray())
+    expect($analytics->commission->toArray())
         ->toBe([
             'global' => [
                 'total' => [
