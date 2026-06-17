@@ -1,0 +1,66 @@
+{
+    "name": "roundly-consulting/trading-analytics-for-laravel",
+    "description": "Calculate trading performance analytics — P&L, returns, streaks, profit factor — for Laravel.",
+    "keywords": [
+        "Roundly Consulting",
+        "laravel",
+        "trading",
+        "analytics"
+    ],
+    "homepage": "https://github.com/roundly-consulting/trading-analytics-for-laravel",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Andrej Mihaliak",
+            "email": "info@mihaliak.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "ext-bcmath": "*",
+        "illuminate/contracts": "^12.0|^13.0",
+        "acme/laravel-package-tools": "^1.16"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.18",
+        "nunomaduro/collision": "^8.8|^9.0",
+        "orchestra/testbench": "^10.0|^11.0",
+        "pestphp/pest": "^4.0",
+        "pestphp/pest-plugin-arch": "^4.0",
+        "pestphp/pest-plugin-laravel": "^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "RoundlyConsulting\\TradingAnalytics\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "RoundlyConsulting\\TradingAnalytics\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "format": "vendor/bin/pint",
+        "analyse": "vendor/bin/phpstan analyse --no-progress",
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage --min=90"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "phpstan/extension-installer": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "RoundlyConsulting\\TradingAnalytics\\TradingAnalyticsServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
