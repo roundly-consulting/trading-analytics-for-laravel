@@ -1,3 +1,11 @@
+<!-- roundly-hero:start -->
+<p align="center">
+  <a href="https://roundly-consulting.com/open-source/docs/trading-analytics-for-laravel?utm_source=github&utm_medium=readme&utm_campaign=open-source&utm_content=trading-analytics-for-laravel">
+    <img src="art/hero.png" alt="Trading Analytics for Laravel — Roundly open source" width="100%">
+  </a>
+</p>
+<!-- roundly-hero:end -->
+
 # Trading Analytics for Laravel
 
 Calculate trading performance analytics — P&L, returns, drawdown, expectancy, risk-adjusted
