@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\TradingAnalytics\Enums;
 
+use RoundlyConsulting\Enums\Helpers;
+
 enum Direction: string
 {
+    use Helpers;
+
     case BUY = 'buy';
     case SELL = 'sell';
 

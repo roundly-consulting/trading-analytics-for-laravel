@@ -5,23 +5,15 @@ declare(strict_types=1);
 namespace RoundlyConsulting\TradingAnalytics\Enums;
 
 use Illuminate\Support\Carbon;
+use RoundlyConsulting\Enums\Helpers;
 
 enum Period: string
 {
+    use Helpers;
+
     case DAILY = 'daily';
     case WEEKLY = 'weekly';
     case MONTHLY = 'monthly';
-
-    /**
-     * The string value of every case, handy for building selects or validation
-     * rules in a host app.
-     *
-     * @return list<string>
-     */
-    public static function values(): array
-    {
-        return array_map(static fn (self $period): string => $period->value, self::cases());
-    }
 
     public function bucketFor(Carbon $moment): string
     {
