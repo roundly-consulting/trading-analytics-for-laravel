@@ -303,6 +303,23 @@ so you can catch them all with one `catch`:
 - `DivisionByZeroException` — division by zero.
 - `UnknownCalculatorException` — `only()` / `except()` given a non-calculator class.
 
+## Integrates with
+
+- [`enums-for-laravel`](https://github.com/roundly-consulting/enums-for-laravel) — the package's
+  `Direction` (buy/sell) and `Period` (daily/weekly/monthly) enums adopt the shared enum helper
+  toolkit, so they expose a full select/validation surface out of the box:
+
+  ```php
+  Direction::validationRule();   // "in:buy,sell"
+  Period::validationRule();      // "in:daily,weekly,monthly"
+
+  Period::toOptions()->all();    // ['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly']
+  Direction::options();          // Collection<EnumOption{value,label,name}> for JS/Inertia selects
+  Period::labels()->all();       // ['Daily', 'Weekly', 'Monthly']
+  ```
+
+  The domain methods stay intact — `Direction::isBuy()` / `isSell()` and `Period::bucketFor()`.
+
 ## Testing
 
 ```bash
