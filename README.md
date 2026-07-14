@@ -320,6 +320,15 @@ so you can catch them all with one `catch`:
 
   The domain methods stay intact — `Direction::isBuy()` / `isSell()` and `Period::bucketFor()`.
 
+- [`package-toolkit-for-laravel`](https://github.com/roundly-consulting/package-toolkit-for-laravel) —
+  the service provider is built on the shared package builder, so the config file, the
+  `trading-analytics-config` publish tag and the container bindings are declared in one place. The
+  package also reports its configured scale and win-rate period to `php artisan about`:
+
+  ```bash
+  php artisan about --only=trading-analytics
+  ```
+
 ## Testing
 
 ```bash
