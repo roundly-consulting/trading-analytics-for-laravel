@@ -216,26 +216,3 @@ it('uses the literal default scale when no config value is set', function (LazyC
 
     expect(Analytics::make($trades)->getScale())->toBe(10);
 })->with('empty-trades');
-
-it('keeps the deprecated static hooks working', function (LazyCollection $trades) {
-    $perTradeCalculators = [];
-    $afterTradesCalculators = [];
-
-    Analytics::calculatePerTradeUsing(function (Analytics $analytics, string $calculator, Trade $trade) use (&$perTradeCalculators) {
-        $perTradeCalculators[class_basename($calculator)] = 1;
-    });
-
-    Analytics::calculateAfterTradesUsing(function (Analytics $analytics, string $calculator) use (&$afterTradesCalculators) {
-        $afterTradesCalculators[class_basename($calculator)] = 2;
-    });
-
-    try {
-        (new Analytics($trades))->calculate();
-
-        expect($perTradeCalculators)->not->toBeEmpty()
-            ->and($afterTradesCalculators)->not->toBeEmpty();
-    } finally {
-        Analytics::calculatePerTradesNormally();
-        Analytics::calculateAfterTradesNormally();
-    }
-})->with('default-trades');

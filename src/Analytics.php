@@ -125,10 +125,6 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
         Analytics\RiskRewardRatio::class => [Analytics\RealizedGrossProfitAndLoss::class],
     ];
 
-    protected static ?Closure $calculatePerTradeUsing = null;
-
-    protected static ?Closure $calculateAfterTradesUsing = null;
-
     protected ?Closure $onEachTrade = null;
 
     protected ?Closure $afterEachTrades = null;
@@ -255,30 +251,6 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
         return $this;
     }
 
-    /** @deprecated Use the instance-level {@see onEachTrade()} instead. */
-    public static function calculatePerTradeUsing(Closure $closure): void
-    {
-        static::$calculatePerTradeUsing = $closure;
-    }
-
-    /** @deprecated Use the instance-level {@see afterTrades()} instead. */
-    public static function calculateAfterTradesUsing(Closure $closure): void
-    {
-        static::$calculateAfterTradesUsing = $closure;
-    }
-
-    /** @deprecated Use the instance-level {@see onEachTrade()} instead. */
-    public static function calculatePerTradesNormally(): void
-    {
-        static::$calculatePerTradeUsing = null;
-    }
-
-    /** @deprecated Use the instance-level {@see afterTrades()} instead. */
-    public static function calculateAfterTradesNormally(): void
-    {
-        static::$calculateAfterTradesUsing = null;
-    }
-
     public function calculate(): static
     {
         $this->initializeAnalyticsResults();
@@ -391,8 +363,6 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
     {
         if ($this->onEachTrade !== null) {
             ($this->onEachTrade)($this, $calculator, $trade);
-        } elseif (static::$calculatePerTradeUsing) {
-            (static::$calculatePerTradeUsing)($this, $calculator, $trade);
         } else {
             $calculator::calculatePerTrade($this, $trade);
         }
@@ -403,8 +373,6 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
     {
         if ($this->afterEachTrades !== null) {
             ($this->afterEachTrades)($this, $calculator);
-        } elseif (static::$calculateAfterTradesUsing) {
-            (static::$calculateAfterTradesUsing)($this, $calculator);
         } else {
             $calculator::calculateAfterTrades($this);
         }
