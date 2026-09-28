@@ -107,3 +107,8 @@ Initial public release.
   any order, and a run without those calculators accepts any order.
 - The risk/reward ratio's `averageWin` / `averageLoss` follow the run's scale like every other
   amount (they were fixed at 10 decimal places).
+- README: the `NumericValueAsString` examples show what they return (the scale truncates at
+  construction; operations mutate unless `immutable: true`), the `withPrefix()` example reads a
+  real path (`->global->total->total`), the `onEachTrade()` / `afterTrades()` closures are
+  documented as replacing a calculator's hook, `winRateByPeriod->rates` holds value objects, and a
+  new Precision table lists which figures follow `->scale()` and which have a fixed scale.

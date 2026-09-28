@@ -164,7 +164,7 @@ use RoundlyConsulting\TradingAnalytics\Facades\TradingAnalytics;
 
 // Build, configure, run
 $analytics = TradingAnalytics::for($trades)
-    ->scale(5)        // arbitrary precision (decimal places), default 10
+    ->scale(5)        // decimal places of every amount, default 10 (see Precision)
     ->calculate();    // returns the Analytics instance
 
 // Or build and run in one call, optionally restricted to some metrics
@@ -229,11 +229,11 @@ TradingAnalytics::for(TradeRecord::query()->where('account_id', $accountId)->old
 TradingAnalytics::calculate($account->trades()->orderBy('close_time')->orderBy('id'), chunk: 500);
 ```
 
-- **Order the query.** The equity curve, maximum drawdown, streaks and running cumulative returns
-  follow the order the trades arrive in, so the package never guesses one: a query without an
-  `orderBy` throws `UnorderedTradeSourceException` before anything runs — including an Eloquent
-  builder, which Laravel would otherwise quietly order by its primary key. Order chronologically,
-  with a unique tie-breaker: `->orderBy('close_time')->orderBy('id')`.
+- **Order the query by close time.** The maximum drawdown, the streaks and the running cumulative
+  return follow the order trades close in (see [Trade order](#trade-order)), so the package never
+  guesses one: a query without an `orderBy` throws `UnorderedTradeSourceException` before anything
+  runs — including an Eloquent builder, which Laravel would otherwise quietly order by its primary
+  key. Order by close time, with a unique tie-breaker: `->orderBy('close_time')->orderBy('id')`.
 - **Chunk size.** `chunk` (default `1000`) is the number of rows per page; a value below 1 throws
   `InvalidChunkSizeException`. Memory scales with the chunk, never with the table.
 - **Paging.** `lazy()` pages with `LIMIT` / `OFFSET`, so every page re-runs the ordered query and
@@ -244,6 +244,22 @@ TradingAnalytics::calculate($account->trades()->orderBy('close_time')->orderBy('
 Rows come back as `stdClass` (query builder) or models (Eloquent) and are read with
 `Trade::fromRow()`, so the columns — or model accessors — must provide the `Trade::fromArray()`
 fields.
+
+### Trade order
+
+The maximum drawdown (the realized equity curve), the winning / losing streaks and the running
+cumulative return follow the order trades close in. While any of them runs — they all do by
+default — realized trades must arrive in close-time order: the first one that closed before the
+trade read ahead of it throws `UnorderedTradeSourceException`, instead of reporting figures for a
+sequence that never happened. Sorting inside the engine would mean holding the whole history in
+memory, which the single pass never does.
+
+- Open trades (no close time) and trades with equal close times may come in any order.
+- Order a query with `->orderBy('close_time')->orderBy('id')`; sort an in-memory collection with
+  `->sortBy('close_time')->values()` first.
+- A run without those calculators (`except([MaxDrawdown::class, Streaks::class,
+  GrossCumulativeReturn::class, NetCumulativeReturn::class])`, or an `only()` without them) accepts
+  any order. Every other metric — including the trading frequency — is order-independent.
 
 ### Running only the metrics you need
 
@@ -260,10 +276,12 @@ $analytics = Analytics::make($trades)->only([Counts::class])->calculate(); // sa
 $analytics = Analytics::make($trades)->except([Streaks::class])->calculate();
 ```
 
-Every calculator runs on its own: `only()` pulls in what it needs, and what that needs in turn
-(`ProfitFactor` brings the unrealized P&L, which brings `Counts`). `except()` still runs an
-excluded calculator that a remaining one depends on — `except([Counts::class])` keeps the counts,
-because every average is divided by them. The figures match a full run either way.
+Every calculator runs on its own: `only()` pulls in what it needs, and what that needs in turn.
+Only three calculators depend on another — `ProfitFactor`, `Expectancy` and `RiskRewardRatio` are
+built from the realized gross P&L, so they bring `RealizedGrossProfitAndLoss` with them; every
+aggregate counts the trades it averages over itself. `except()` still runs an excluded calculator
+that a remaining one depends on — `except([RealizedGrossProfitAndLoss::class])` keeps it while the
+profit factor needs it. The figures match a full run either way.
 
 Passing a class that is not a registered calculator throws an `UnknownCalculatorException`. To
 discover what `only()` / `except()` accept, call `metrics()`:
@@ -280,23 +298,34 @@ and `->forQuoteCurrency()` breakdowns, each split into `total`, `buy` and `sell`
 
 | Accessor | Description |
 |---|---|
-| `counts` | Number of trades, by direction and breakdown. |
-| `wins` | Winning-trade counts and win ratios. |
-| `volume` | Traded size (volume) aggregates. |
-| `value` | Notional value aggregates. |
-| `commission` | Commission totals and averages. |
-| `unrealizedProfitAndLoss` | Gross & net P&L for open trades. |
-| `realizedProfitAndLoss` | Gross & net P&L for closed trades. |
-| `profitFactor` | Gross profit divided by gross loss. |
-| `cumulativeReturn` | Geometric cumulative return (gross & net). |
-| `frequency` | How often trades are placed (per hour/day/week/…). |
-| `duration` | How long realized trades stay open. |
-| `streaks` | Longest winning and losing streaks. |
-| `expectancy` | Expected value of an average trade. |
+| `counts` | Number of trades (open and closed), by direction and breakdown. |
+| `wins` | Winning closed trades and the win ratio: wins over closed trades. |
+| `volume` | Traded size (volume) aggregates, over every trade. |
+| `value` | Notional value (size × open price) aggregates, over every trade. |
+| `commission` | Commission per trade; a trade without one counts as 0. |
+| `unrealizedProfitAndLoss` | Gross & net P&L of the open trades (at their close price), averaged over them. |
+| `realizedProfitAndLoss` | Gross & net P&L of the closed trades, averaged over them. |
+| `profitFactor` | Realized gross profit divided by realized gross loss (0 without a loss). |
+| `cumulativeReturn` | Compounded return in percent (gross & net), its geometric mean per trade, and the highest / lowest running return. |
+| `frequency` | How often trades are opened (per hour/day/week/…), over the span of open times. |
+| `duration` | How long closed trades stayed open, in seconds. |
+| `streaks` | Longest runs of winning and of losing closed trades. |
+| `expectancy` | Expected P&L of an average closed trade. |
 | `riskRewardRatio` | Average win divided by average loss. |
-| `winRateByPeriod` | Win rate bucketed by day / week / month. |
-| `maxDrawdown` | Largest peak-to-trough equity drop. |
-| `riskAdjustedReturns` | Sharpe and Sortino ratios. |
+| `winRateByPeriod` | Win rate of closed trades, bucketed by the day / week / month they opened. |
+| `maxDrawdown` | Largest peak-to-trough drop of the realized (net) equity curve. |
+| `riskAdjustedReturns` | Sharpe and Sortino ratios of the realized net returns. |
+
+Every aggregate (`total`, `average`, `highest`, `lowest`) also carries a `count` — the trades it
+was built from — and its average divides by exactly those: realized figures by the closed trades,
+unrealized ones by the open trades.
+
+A break-even trade (P&L exactly 0) is a closed trade that neither won nor lost: it counts towards
+the win ratio's denominator and the expectancy, but not towards the average loss of the
+risk/reward ratio, and it ends both the winning and the losing streak. Fewer than two trades, or
+trades that all opened in the same second, leave the frequency at `0` with no unit; a figure with
+nothing to divide (no loss for the profit factor or risk/reward ratio, no deviation for Sharpe or
+Sortino) stays `0`.
 
 ```php
 // Breakdown example
@@ -311,6 +340,29 @@ $analytics->maxDrawdown->percentage;
 $analytics->riskAdjustedReturns->sharpeRatio;
 $analytics->riskAdjustedReturns->sortinoRatio;
 ```
+
+### Precision
+
+`->scale()` (or the `scale` config key) sets the decimal places of every amount: P&L, volume,
+value, commission, their averages, the expectancy's and risk/reward ratio's average win / loss,
+and the drawdown. bcmath truncates rather than rounds, so each figure is truncated to its scale
+as it is stored; ratios are divided at a higher working scale first, so an operand below the
+result's precision (a loss of 0.00005 BTC, a deviation of a few basis points) still counts.
+Ratios and percentages are reported at a fixed scale, whatever the run's:
+
+| Figure | Decimal places |
+|---|---|
+| counts, wins, streaks | 0 |
+| `frequency` | 1 |
+| `wins->winRatio`, `profitFactor` | 2 |
+| `cumulativeReturn` (percent), `duration` (seconds) | 2 |
+| `expectancy->winRate` / `lossRate`, `winRateByPeriod->rates` | 4 |
+| `riskRewardRatio->value`, `maxDrawdown->percentage`, `sharpeRatio`, `sortinoRatio` | 4 |
+| `riskAdjustedReturns` mean / deviations | 10 |
+
+A trade's own numbers keep the scale they were built with — 10 decimal places through
+`Trade::make()`, `fromArray()` and `fromRow()`; construct the `NumericValueAsString` fields
+yourself (`NumericValueAsString::of($size, scale: 18)`) when a price × size needs more.
 
 ### JSON & API responses
 
@@ -341,7 +393,9 @@ $analytics = Analytics::make($trades)
     ->usingWinRatePeriod(Period::MONTHLY) // DAILY (default), WEEKLY, MONTHLY
     ->calculate();
 
-$analytics->winRateByPeriod->rates; // ['2024-01' => '0.6666', ...]
+$analytics->winRateByPeriod->rates;                 // ['2024-01' => NumericValueAsString, ...]
+$analytics->winRateByPeriod->rates['2024-01']->toRawString(); // '0.6666'
+$analytics->winRateByPeriod->toArray()['rates'];   // ['2024-01' => '0.6666', ...]
 ```
 
 ### Working with `NumericValueAsString`
@@ -350,23 +404,35 @@ All numeric results are `NumericValueAsString` value objects backed by a precise
 Build one with the `::of()` named constructor (cleaner than `new`):
 
 ```php
-$value = NumericValueAsString::of('1.005', scale: 2);
+NumericValueAsString::of('1.005')->round(2)->toRawString();           // '1.01' — half away from zero
+NumericValueAsString::of('1.005', scale: 2)->toRawString();           // '1.00' — the scale truncates
+NumericValueAsString::of('1e-5')->toRawString();                      // '0.0000100000'
 
-$value->add(1)->subtract('0.5')->multiply(2); // chainable bcmath operations
-$value->round(2)->toRawString();              // '1.01' — true half-away-from-zero rounding
-(string) $value;                              // formatted, with optional prefix/suffix
-$value->toFloat();                            // float, when you explicitly want one
+$value = NumericValueAsString::of('10', scale: 2);
+$value->add(1)->subtract('0.5')->multiply(2)->toRawString();          // '21.00' — mutates $value
+$value->add(1, immutable: true)->toRawString();                       // '22.00' — $value stays '21.00'
+(string) $value->withSuffix('USD');                                   // '21.00 USD'
+$value->toFloat();                                                    // 21.0, when you explicitly want a float
 ```
+
+Operations change the value in place and return it, so they chain; pass `immutable: true` for a
+new instance instead. Input is read exactly: numeric strings (padding allowed), integers, floats
+and exponent notation (`'1.5e-3'`, `0.00001`) are expanded into plain decimals before bcmath sees
+them.
 
 Format a result for display without mutating the stored value using the immutable `withPrefix()` /
 `withSuffix()` helpers, which return a new instance:
 
 ```php
-$analytics->commission->global->total->withPrefix('$')->toString(); // '$ 25.00'
+$commission = $analytics->commission->global->total->total;  // NumericValueAsString, e.g. '25.0000000000'
+
+$commission->withPrefix('$')->toString();            // '$ 25.0000000000'
+$commission->withPrefix('$')->round(2)->toString();  // '$ 25.00' — the clone is rounded, not the result
 ```
 
-Dividing by zero throws a `DivisionByZeroException`, passing a non-numeric string throws an
-`InvalidNumericOperationException`, and a negative scale throws an `InvalidScaleException`.
+Dividing by zero throws a `DivisionByZeroException`; non-numeric input (`'abc'`, `INF`, `NAN`) or
+an exponent above 1000 throws an `InvalidNumericOperationException`; a negative scale throws an
+`InvalidScaleException`.
 
 ## Extending
 
@@ -384,15 +450,18 @@ TradingAnalytics::calculate($trades); // a DeskAnalytics instance
 
 `using()` throws `InvalidEngineException` for a class that isn't `Analytics` or a subclass of it.
 
-Or override the per-trade / after-trades hooks per instance:
+Or replace the per-trade / after-trades hooks per instance. A closure runs **instead of** each
+calculator's own hook, so call the hook yourself to keep the default figures — leave it out and
+the metrics stay at zero:
 
 ```php
 $analytics = Analytics::make($trades)
     ->onEachTrade(function (Analytics $analytics, string $calculator, Trade $trade) {
-        // observe or customise each calculator per trade
+        // observe, skip or adjust the trade for this calculator, then run it
+        $calculator::calculatePerTrade($analytics, $trade);
     })
     ->afterTrades(function (Analytics $analytics, string $calculator) {
-        // run after all trades have been processed
+        $calculator::calculateAfterTrades($analytics);
     })
     ->calculate();
 ```
@@ -408,10 +477,12 @@ Every exception extends `RoundlyConsulting\TradingAnalytics\Exceptions\TradingAn
 so you can catch them all with one `catch`:
 
 - `InvalidTradeException` — empty currency, close-before-open, a missing or null required field, a field of the wrong type, or an invalid direction.
-- `UnorderedTradeSourceException` — a query passed as a trade source without an `orderBy`.
+- `UnorderedTradeSourceException` — a query passed as a trade source without an `orderBy`, or a
+  realized trade that arrives after one that closed later (see [Trade order](#trade-order)).
 - `InvalidChunkSizeException` — a `chunk` below 1.
 - `InvalidScaleException` — negative scale.
-- `InvalidNumericOperationException` — non-numeric input or a fractional `pow()` exponent.
+- `InvalidNumericOperationException` — non-numeric input (`INF` / `NAN` included), an exponent
+  above 1000, or a fractional `pow()` exponent.
 - `DivisionByZeroException` — division by zero.
 - `UnknownCalculatorException` — `only()` / `except()` / `calculate(only: …)` given a non-calculator class.
 - `InvalidEngineException` — `TradingAnalytics::using()` given a class that isn't an `Analytics` engine.

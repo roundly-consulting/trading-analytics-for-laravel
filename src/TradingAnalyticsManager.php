@@ -24,8 +24,10 @@ use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
  * A trade source is any iterable of trades or rows ({@see Trade::fromRow()} reads arrays,
  * `stdClass` rows, Eloquent models, `Arrayable`s and plain objects), or a query — a query
  * builder, an Eloquent builder or a relation — which is streamed with `lazy($chunk)`, one
- * page of `$chunk` rows in memory at a time. The metrics depend on trade order, so a query
- * must carry an ORDER BY; an unordered one throws {@see UnorderedTradeSourceException}.
+ * page of `$chunk` rows in memory at a time. The drawdown, streaks and cumulative return follow
+ * the order trades close in, so a query must carry an ORDER BY (close time first); an unordered
+ * one throws {@see UnorderedTradeSourceException}, as does a trade that arrives out of close-time
+ * order.
  *
  * A container singleton, so {@see using()} set in a service provider applies app-wide.
  *

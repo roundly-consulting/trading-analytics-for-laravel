@@ -132,8 +132,8 @@ final class Trade implements Arrayable, Jsonable, JsonSerializable
 
     /**
      * Lazily map an iterable of rows (anything {@see fromRow()} reads, trades included) into
-     * trades, so `Analytics::make(Trade::collect($query->orderBy('id')->lazy()))` is a
-     * one-liner. Nothing is read until the collection is iterated.
+     * trades, so `Analytics::make(Trade::collect($query->orderBy('close_time')->orderBy('id')->lazy()))`
+     * is a one-liner. Nothing is read until the collection is iterated.
      *
      * @param  iterable<Trade|TradeRow|array<array-key, mixed>|object>  $rows
      * @return LazyCollection<int, Trade>
