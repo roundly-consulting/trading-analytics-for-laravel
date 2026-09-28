@@ -4,11 +4,18 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\TradingAnalytics\Exceptions;
 
+use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
+
 final class InvalidNumericOperationException extends TradingAnalyticsException
 {
     public static function nonNumericValue(string $value): self
     {
         return new self("The value [{$value}] is not numeric and cannot be used in a numeric operation.");
+    }
+
+    public static function outOfRange(string $value): self
+    {
+        return new self("The value [{$value}] is too large to expand into a decimal; exponents above ".NumericValueAsString::MAX_EXPONENT.' are not supported.');
     }
 
     public static function fractionalExponent(string $exponent): self

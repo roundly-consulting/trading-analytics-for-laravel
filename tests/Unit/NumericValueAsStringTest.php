@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
+use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 use RoundlyConsulting\TradingAnalytics\Exceptions\DivisionByZeroException;
 use RoundlyConsulting\TradingAnalytics\Exceptions\InvalidNumericOperationException;
 
@@ -166,4 +167,42 @@ it('serializes a numeric value to json', function () {
 
     expect($value->toJson())->toBe(json_encode($value->toArray()))
         ->and(json_encode($value))->toBe($value->toJson());
+});
+
+it('expands exponent notation and floats exactly instead of failing in bcmath', function (string|int|float $value, int $scale, string $expected) {
+    expect(NumericValueAsString::of($value, scale: $scale)->toRawString())->toBe($expected);
+})->with([
+    'string 1e-5' => ['1e-5', 10, '0.0000100000'],
+    'string 1E5' => ['1E5', 2, '100000.00'],
+    'signed mantissa and exponent' => ['-1.5e+3', 1, '-1500.0'],
+    'fraction-only mantissa' => ['.25e1', 2, '2.50'],
+    'exponent past the scale' => ['7e-30', 10, '0.0000000000'],
+    'float 0.00001' => [0.00001, 10, '0.0000100000'],
+    'float 1.5e20' => [1.5e20, 0, '150000000000000000000'],
+    'padded numeric string' => [" 12.5\n", 2, '12.50'],
+    'plain decimal' => ['45000.10', 2, '45000.10'],
+]);
+
+it('reads exponent notation in every operand', function () {
+    $value = NumericValueAsString::of('1', scale: 6);
+
+    expect($value->add('2.5e-3')->toRawString())->toBe('1.002500')
+        ->and($value->multiply(1e2)->toRawString())->toBe('100.250000')
+        ->and($value->isGreaterThan('1e2'))->toBeTrue();
+});
+
+it('rejects values bcmath cannot hold with the package exception', function (string|float $value) {
+    expect(fn () => NumericValueAsString::of($value))
+        ->toThrow(InvalidNumericOperationException::class);
+})->with([
+    'infinite float' => [INF],
+    'nan float' => [NAN],
+    'exponent too large to expand' => ['1e5000'],
+]);
+
+it('builds a trade from a tiny float size', function () {
+    $trade = Trade::make('BTC', 'USD', '100', '110', 0.00001, 'buy', '2024-01-01');
+
+    expect($trade->size->toRawString())->toBe('0.0000100000')
+        ->and($trade->profitAndLoss()->toRawString())->toBe('0.0001000000');
 });

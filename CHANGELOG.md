@@ -61,3 +61,7 @@ Initial public release.
   counts without declaring `Counts` as a dependency, and dependencies were resolved one level deep
   only. Dependencies are now declared and resolved transitively, and `except()` keeps a
   dependency a remaining calculator still needs.
+- Exponent notation and floats no longer crash inside bcmath (`ValueError: bcadd(): Argument #1
+  is not well-formed`): `NumericValueAsString::of('1e-5')`, `Trade::make(size: 0.00001)` and
+  padded strings like `' 12.5 '` are expanded exactly into plain decimals. `INF` / `NAN` and an
+  exponent above 1000 throw `InvalidNumericOperationException`.

@@ -23,6 +23,9 @@ final class NumericValueAsString implements Arrayable, Jsonable, JsonSerializabl
     use HasSuffix;
     use SerializesToJson;
 
+    /** The largest exponent `1e…` input is expanded for: far past any amount, yet bounded. */
+    public const int MAX_EXPONENT = 1000;
+
     /** @var numeric-string */
     protected string $value = '0.0000000000';
 
@@ -309,10 +312,52 @@ final class NumericValueAsString implements Arrayable, Jsonable, JsonSerializabl
     {
         $value = $value instanceof NumericValueAsString ? $value->toRawString() : (string) $value;
 
-        if (! is_numeric($value)) {
+        // PHP accepts padding and exponent notation as numeric (a float casts to '1.0E-5'),
+        // bcmath accepts neither, so both are normalised to a plain decimal first.
+        $trimmed = trim($value, " \t\n\r\v\f");
+
+        if (! is_numeric($trimmed)) {
             throw InvalidNumericOperationException::nonNumericValue($value);
         }
 
-        return bcadd($value, '0', $this->scale);
+        return bcadd($this->expandExponent($trimmed), '0', $this->scale);
+    }
+
+    /**
+     * Rewrite `1.5e-3` as `0.0015` by moving the decimal point in the digit string, so the
+     * expansion is exact. A value whose digits all fall past the scale is zero; a positive
+     * exponent above {@see MAX_EXPONENT} is refused rather than expanded into a string that
+     * large.
+     *
+     * @param  numeric-string  $value
+     * @return numeric-string
+     */
+    private function expandExponent(string $value): string
+    {
+        if (preg_match('/^([+-]?)(\d*)(?:\.(\d*))?[eE]([+-]?\d+)$/', $value, $parts) !== 1) {
+            return $value;
+        }
+
+        [, $sign, $integer, $fraction, $exponent] = $parts;
+
+        if ((int) $exponent > self::MAX_EXPONENT) {
+            throw InvalidNumericOperationException::outOfRange($value);
+        }
+
+        $digits = $integer.$fraction;
+        $point = strlen($integer) + (int) $exponent;
+
+        if ($point < -$this->scale) {
+            return '0';
+        }
+
+        /** @var numeric-string $expanded */
+        $expanded = match (true) {
+            $point <= 0 => $sign.'0.'.str_repeat('0', -$point).$digits,
+            $point >= strlen($digits) => $sign.$digits.str_repeat('0', $point - strlen($digits)),
+            default => $sign.substr($digits, 0, $point).'.'.substr($digits, $point),
+        };
+
+        return $expanded;
     }
 }
