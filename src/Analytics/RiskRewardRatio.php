@@ -23,9 +23,12 @@ class RiskRewardRatio implements AnalyticsInterface
             return;
         }
 
-        if ($trade->profitAndLoss()->isPositiveNonZero()) {
+        $pnl = $trade->profitAndLoss();
+
+        // A break-even trade is neither: counting it as a loss would dilute the average loss.
+        if ($pnl->isPositiveNonZero()) {
             $result->winningTrades++;
-        } else {
+        } elseif ($pnl->isLessThan(0)) {
             $result->losingTrades++;
         }
     }

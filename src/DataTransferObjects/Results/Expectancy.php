@@ -19,6 +19,9 @@ final class Expectancy implements Arrayable, Jsonable, JsonSerializable
 
     public int $losingTrades = 0;
 
+    /** Closed trades with a P&L of exactly zero: neither a win nor a loss. */
+    public int $breakEvenTrades = 0;
+
     public NumericValueAsString $value;
 
     public NumericValueAsString $averageWin;

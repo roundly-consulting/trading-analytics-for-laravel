@@ -102,6 +102,12 @@ it('correctly returns number of winning trades after calculation', function (Laz
                         'buy' => '0.50',
                         'sell' => '0.00',
                     ],
+                    // XRP's one closed trade lost: a real 0.00, listed like any other ratio.
+                    'XRP' => [
+                        'total' => '0.00',
+                        'buy' => '0.00',
+                        'sell' => '0.00',
+                    ],
                 ],
                 'per_quote_currency' => [
                     'USD' => [
@@ -119,6 +125,11 @@ it('correctly returns number of winning trades after calculation', function (Laz
                     'ETH/USD' => [
                         'total' => '0.33',
                         'buy' => '0.50',
+                        'sell' => '0.00',
+                    ],
+                    'XRP/USD' => [
+                        'total' => '0.00',
+                        'buy' => '0.00',
                         'sell' => '0.00',
                     ],
                 ],

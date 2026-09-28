@@ -10,9 +10,11 @@ use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
 
 /**
- * Expected value of an average trade: (winRate * avgWin) - (lossRate * avgLoss).
- * Derived from the realized gross profit/loss aggregates already collected in
- * the single pass, so it adds no extra iteration over the trades.
+ * Expected value of an average closed trade: (winRate × avgWin) − (lossRate × avgLoss).
+ *
+ * A break-even trade is neither a win nor a loss — it only dilutes both rates — so the
+ * expression reduces to (gross profit − gross loss) / closed trades, which is how the value is
+ * computed: straight from the realized gross totals, with no rounded rate in between.
  */
 class Expectancy implements AnalyticsInterface
 {
@@ -24,11 +26,13 @@ class Expectancy implements AnalyticsInterface
             return;
         }
 
-        if ($trade->profitAndLoss()->isPositiveNonZero()) {
-            $result->winningTrades++;
-        } else {
-            $result->losingTrades++;
-        }
+        $pnl = $trade->profitAndLoss();
+
+        match (true) {
+            $pnl->isPositiveNonZero() => $result->winningTrades++,
+            $pnl->isLessThan(0) => $result->losingTrades++,
+            default => $result->breakEvenTrades++,
+        };
     }
 
     public static function calculateAfterTrades(Analytics $analytics): void
@@ -39,7 +43,7 @@ class Expectancy implements AnalyticsInterface
             return;
         }
 
-        $total = $result->winningTrades + $result->losingTrades;
+        $total = $result->winningTrades + $result->losingTrades + $result->breakEvenTrades;
 
         if ($total === 0) {
             return;
@@ -56,12 +60,16 @@ class Expectancy implements AnalyticsInterface
             $result->averageLoss->set($grossLosses->divide(value: $result->losingTrades, immutable: true));
         }
 
-        $result->winRate->set((new NumericValueAsString(value: $result->winningTrades, scale: 10))->divide(value: $total, immutable: true));
-        $result->lossRate->set((new NumericValueAsString(value: $result->losingTrades, scale: 10))->divide(value: $total, immutable: true));
+        $result->winRate->set(static::rate($result->winningTrades, $total));
+        $result->lossRate->set(static::rate($result->losingTrades, $total));
 
-        $expectedWin = $result->winRate->cloneWithScale(10)->multiply(value: $result->averageWin, immutable: true);
-        $expectedLoss = $result->lossRate->cloneWithScale(10)->multiply(value: $result->averageLoss, immutable: true);
+        $result->value->set(
+            $grossProfits->subtract(value: $grossLosses, immutable: true)->divide(value: $total),
+        );
+    }
 
-        $result->value->set($expectedWin->subtract(value: $expectedLoss, immutable: true));
+    protected static function rate(int $trades, int $total): NumericValueAsString
+    {
+        return (new NumericValueAsString(value: $trades, scale: 10))->divide(value: $total);
     }
 }

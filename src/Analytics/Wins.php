@@ -6,133 +6,70 @@ namespace RoundlyConsulting\TradingAnalytics\Analytics;
 
 use RoundlyConsulting\TradingAnalytics\Analytics;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericByDirections;
+use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalByCurrency;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
 
+/**
+ * Winning trades and the win ratio, over closed trades only: an open trade has no outcome
+ * yet. A break-even trade is a closed trade that did not win.
+ */
 class Wins implements AnalyticsInterface
 {
     public static function calculatePerTrade(Analytics $analytics, Trade $trade): void
     {
-        if ($trade->profitAndLoss()->isLessThanOrEqualTo(0)) {
+        if ($trade->isOpen()) {
             return;
         }
 
-        // Global, per pair, per base currency and per quote currency total number of winning trades
-        $analytics->wins->global->total->add(1);
-        $analytics->wins->forPair($trade->pair())->total->add(1);
-        $analytics->wins->forBaseCurrency($trade->baseCurrency)->total->add(1);
-        $analytics->wins->forQuoteCurrency($trade->quoteCurrency)->total->add(1);
+        static::increment($analytics->wins->closed, $trade);
 
-        if ($trade->direction->isBuy()) {
-            // Global, per pair, per base currency and per quote currency total number of winning trades by direction Buy
-            $analytics->wins->global->buy->add(1);
-            $analytics->wins->forPair($trade->pair())->buy->add(1);
-            $analytics->wins->forBaseCurrency($trade->baseCurrency)->buy->add(1);
-            $analytics->wins->forQuoteCurrency($trade->quoteCurrency)->buy->add(1);
-        } else {
-            // Global, per pair, per base currency and per quote currency total number of winning trades by direction Sell
-            $analytics->wins->global->sell->add(1);
-            $analytics->wins->forPair($trade->pair())->sell->add(1);
-            $analytics->wins->forBaseCurrency($trade->baseCurrency)->sell->add(1);
-            $analytics->wins->forQuoteCurrency($trade->quoteCurrency)->sell->add(1);
+        if ($trade->profitAndLoss()->isPositiveNonZero()) {
+            static::increment($analytics->wins, $trade);
         }
     }
 
     public static function calculateAfterTrades(Analytics $analytics): void
     {
-        static::calculateGlobalWinRatio($analytics);
-        static::calculatePairWinRatio($analytics);
-        static::calculateBaseCurrencyWinRatio($analytics);
-        static::calculateQuoteCurrencyWinRatio($analytics);
-    }
+        $wins = $analytics->wins;
+        $ratio = $wins->winRatio;
 
-    protected static function calculateGlobalWinRatio(Analytics $analytics): void
-    {
-        $analytics->wins->winRatio->global->total = static::calculateRatio(
-            $analytics->wins->global->total,
-            $analytics->counts->global->total,
-        );
+        static::calculateRatios($wins->global, $wins->closed->global, $ratio->global);
 
-        $analytics->wins->winRatio->global->buy = static::calculateRatio(
-            $analytics->wins->global->buy,
-            $analytics->counts->global->buy,
-        );
+        foreach ($wins->closed->perPair as $pair => $closed) {
+            static::calculateRatios($wins->perPair[$pair] ?? null, $closed, $ratio->forPair($pair));
+        }
 
-        $analytics->wins->winRatio->global->sell = static::calculateRatio(
-            $analytics->wins->global->sell,
-            $analytics->counts->global->sell,
-        );
-    }
+        foreach ($wins->closed->perBaseCurrency as $baseCurrency => $closed) {
+            static::calculateRatios($wins->perBaseCurrency[$baseCurrency] ?? null, $closed, $ratio->forBaseCurrency($baseCurrency));
+        }
 
-    protected static function calculatePairWinRatio(Analytics $analytics): void
-    {
-        /** @var NumericByDirections $pairWins */
-        foreach ($analytics->wins->perPair as $pair => $pairWins) {
-            $analytics->wins->winRatio->forPair($pair)->total = static::calculateRatio(
-                $pairWins->total,
-                $analytics->counts->forPair($pair)->total,
-            );
-
-            $analytics->wins->winRatio->forPair($pair)->buy = static::calculateRatio(
-                $pairWins->buy,
-                $analytics->counts->forPair($pair)->buy,
-            );
-
-            $analytics->wins->winRatio->forPair($pair)->sell = static::calculateRatio(
-                $pairWins->sell,
-                $analytics->counts->forPair($pair)->sell,
-            );
+        foreach ($wins->closed->perQuoteCurrency as $quoteCurrency => $closed) {
+            static::calculateRatios($wins->perQuoteCurrency[$quoteCurrency] ?? null, $closed, $ratio->forQuoteCurrency($quoteCurrency));
         }
     }
 
-    protected static function calculateBaseCurrencyWinRatio(Analytics $analytics): void
+    protected static function increment(NumericDirectionalByCurrency $dto, Trade $trade): void
     {
-        /** @var NumericByDirections $pairWins */
-        foreach ($analytics->wins->perBaseCurrency as $baseCurrency => $pairWins) {
-            $analytics->wins->winRatio->forBaseCurrency($baseCurrency)->total = static::calculateRatio(
-                $pairWins->total,
-                $analytics->counts->forBaseCurrency($baseCurrency)->total,
-            );
-
-            $analytics->wins->winRatio->forBaseCurrency($baseCurrency)->buy = static::calculateRatio(
-                $pairWins->buy,
-                $analytics->counts->forBaseCurrency($baseCurrency)->buy,
-            );
-
-            $analytics->wins->winRatio->forBaseCurrency($baseCurrency)->sell = static::calculateRatio(
-                $pairWins->sell,
-                $analytics->counts->forBaseCurrency($baseCurrency)->sell,
-            );
+        foreach ([$dto->global, $dto->forPair($trade->pair()), $dto->forBaseCurrency($trade->baseCurrency), $dto->forQuoteCurrency($trade->quoteCurrency)] as $counts) {
+            $counts->total->add(1);
+            ($trade->direction->isBuy() ? $counts->buy : $counts->sell)->add(1);
         }
     }
 
-    protected static function calculateQuoteCurrencyWinRatio(Analytics $analytics): void
+    protected static function calculateRatios(?NumericByDirections $wins, NumericByDirections $closed, NumericByDirections $ratio): void
     {
-        /** @var NumericByDirections $pairWins */
-        foreach ($analytics->wins->perQuoteCurrency as $quoteCurrency => $pairWins) {
-            $analytics->wins->winRatio->forQuoteCurrency($quoteCurrency)->total = static::calculateRatio(
-                $pairWins->total,
-                $analytics->counts->forQuoteCurrency($quoteCurrency)->total,
-            );
-
-            $analytics->wins->winRatio->forQuoteCurrency($quoteCurrency)->buy = static::calculateRatio(
-                $pairWins->buy,
-                $analytics->counts->forQuoteCurrency($quoteCurrency)->buy,
-            );
-
-            $analytics->wins->winRatio->forQuoteCurrency($quoteCurrency)->sell = static::calculateRatio(
-                $pairWins->sell,
-                $analytics->counts->forQuoteCurrency($quoteCurrency)->sell,
-            );
-        }
+        $ratio->total = static::calculateRatio($wins?->total, $closed->total);
+        $ratio->buy = static::calculateRatio($wins?->buy, $closed->buy);
+        $ratio->sell = static::calculateRatio($wins?->sell, $closed->sell);
     }
 
     protected static function calculateRatio(
-        NumericValueAsString $value,
+        ?NumericValueAsString $value,
         NumericValueAsString $total
     ): NumericValueAsString {
-        if ($total->isZero()) {
+        if ($value === null || $total->isZero()) {
             return new NumericValueAsString(scale: 2);
         }
 

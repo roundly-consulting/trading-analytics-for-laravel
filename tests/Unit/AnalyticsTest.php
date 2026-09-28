@@ -96,17 +96,18 @@ it('returns calculated analytics as array', function (LazyCollection $trades) us
 })->with('empty-trades');
 
 it('runs only the requested calculators and their dependencies', function (LazyCollection $trades) {
-    $analytics = Analytics::make($trades)->only([Analytics\Wins::class])->calculate();
+    $analytics = Analytics::make($trades)->only([Analytics\ProfitFactor::class])->calculate();
 
     expect($analytics)
-        ->wins->not->toBeNull()
-        ->counts->not->toBeNull() // pulled in as a dependency of Wins
+        ->profitFactor->not->toBeNull()
+        ->realizedProfitAndLoss->not->toBeNull() // pulled in as a dependency of ProfitFactor
+        ->counts->toBeNull()
         ->volume->toBeNull()
         ->streaks->toBeNull()
         ->expectancy->toBeNull();
 
     expect($analytics->toArray())
-        ->toHaveKeys(['wins', 'counts'])
+        ->toHaveKeys(['profit_factor', 'profit_and_loss'])
         ->not->toHaveKey('volume');
 })->with('default-trades');
 

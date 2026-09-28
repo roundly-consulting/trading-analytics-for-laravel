@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\LazyCollection;
 use RoundlyConsulting\TradingAnalytics\Analytics;
 use RoundlyConsulting\TradingAnalytics\Analytics\ProfitFactor;
+use RoundlyConsulting\TradingAnalytics\Analytics\Streaks;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 
 /**
@@ -170,4 +171,79 @@ it('keeps a total loss in the cumulative return instead of restarting it', funct
         ->and($gross?->average->toRawString())->toBe('-100.00')
         ->and($gross?->highest->toRawString())->toBe('-100.00')
         ->and($gross?->lowest->toRawString())->toBe('-100.00');
+});
+
+it('takes wins and the win ratio over closed trades only', function (): void {
+    // 2 winners out of the 3 closed trades; the open trade is neither a win nor a trade here.
+    $wins = handComputed()->wins;
+
+    expect($wins?->global->total->toRawString())->toBe('2')
+        ->and($wins?->winRatio->global->total->toRawString())->toBe('0.66')
+        ->and($wins?->winRatio->global->buy->toRawString())->toBe('1.00')
+        ->and($wins?->winRatio->global->sell->toRawString())->toBe('0.00')
+        ->and($wins?->winRatio->forPair('BTC/USD')->total->toRawString())->toBe('0.50')
+        ->and($wins?->winRatio->forPair('ETH/USD')->total->toRawString())->toBe('1.00')
+        ->and(handComputed()->expectancy?->winRate->toRawString())->toBe('0.6666');
+});
+
+it('serializes a zero win ratio instead of dropping the key', function (): void {
+    $trades = LazyCollection::make([
+        Trade::make('BTC', 'USD', '100', '110', '1', 'buy', '2024-01-01 10:00:00', null, '2024-01-01 11:00:00'),
+        Trade::make('XRP', 'EUR', '1', '0.9', '100', 'buy', '2024-01-02 10:00:00', null, '2024-01-02 11:00:00'),
+    ]);
+
+    $winRatio = Analytics::for($trades)->calculate()->toArray()['wins']['win_ratio'];
+
+    expect($winRatio['per_pair'])->toBe([
+        'BTC/USD' => ['total' => '1.00', 'buy' => '1.00', 'sell' => '0.00'],
+        'XRP/EUR' => ['total' => '0.00', 'buy' => '0.00', 'sell' => '0.00'],
+    ])->and($winRatio['global'])->toBe(['total' => '0.50', 'buy' => '0.50', 'sell' => '0.00']);
+});
+
+it('computes expectancy and risk/reward at full precision', function (): void {
+    // Average win 30/2 = 15, average loss 10/1 = 10: expectancy (30 − 10)/3, reward/risk 1.5.
+    $analytics = handComputed();
+
+    expect($analytics->expectancy?->value->toRawString())->toBe('6.6666666666')
+        ->and($analytics->expectancy?->averageWin->toRawString())->toBe('15.0000000000')
+        ->and($analytics->expectancy?->averageLoss->toRawString())->toBe('10.0000000000')
+        ->and($analytics->expectancy?->lossRate->toRawString())->toBe('0.3333')
+        ->and($analytics->riskRewardRatio?->value->toRawString())->toBe('1.5000');
+});
+
+it('counts a break-even trade as neither a win nor a loss', function (): void {
+    // +100, −50 and a 0: the average loss is 50 (not 25), so reward/risk is 2 (not 4).
+    $trades = LazyCollection::make([
+        Trade::make('BTC', 'USD', '100', '200', '1', 'buy', '2024-01-01 10:00:00', null, '2024-01-01 11:00:00'),
+        Trade::make('BTC', 'USD', '100', '50', '1', 'buy', '2024-01-02 10:00:00', null, '2024-01-02 11:00:00'),
+        Trade::make('BTC', 'USD', '100', '100', '1', 'buy', '2024-01-03 10:00:00', null, '2024-01-03 11:00:00'),
+    ]);
+
+    $analytics = Analytics::for($trades)->calculate();
+
+    expect($analytics->riskRewardRatio?->value->toRawString())->toBe('2.0000')
+        ->and($analytics->riskRewardRatio?->averageLoss->toRawString())->toBe('50.0000000000')
+        ->and($analytics->riskRewardRatio?->losingTrades)->toBe(1)
+        // Expectancy stays the average P&L of all 3 closed trades: (100 − 50 + 0) / 3.
+        ->and($analytics->expectancy?->value->toRawString())->toBe('16.6666666666')
+        ->and($analytics->expectancy?->averageLoss->toRawString())->toBe('50.0000000000')
+        ->and($analytics->expectancy?->winRate->toRawString())->toBe('0.3333')
+        ->and($analytics->expectancy?->lossRate->toRawString())->toBe('0.3333')
+        ->and($analytics->expectancy?->breakEvenTrades)->toBe(1)
+        ->and($analytics->streaks?->losses->global->total->toRawString())->toBe('1');
+});
+
+it('breaks both streaks on a break-even trade', function (): void {
+    // win, break-even, win, loss, break-even, loss: no two outcomes in a row.
+    $pnls = [10, 0, 10, -10, 0, -10];
+    $trades = LazyCollection::make(array_map(
+        static fn (int $pnl, int $day): Trade => Trade::make('BTC', 'USD', '100', (string) (100 + $pnl), '1', 'buy', "2024-01-0{$day} 10:00:00", null, "2024-01-0{$day} 11:00:00"),
+        $pnls,
+        range(1, count($pnls)),
+    ));
+
+    $streaks = Analytics::for($trades)->only([Streaks::class])->calculate()->streaks;
+
+    expect($streaks?->wins->global->total->toRawString())->toBe('1')
+        ->and($streaks?->losses->global->total->toRawString())->toBe('1');
 });

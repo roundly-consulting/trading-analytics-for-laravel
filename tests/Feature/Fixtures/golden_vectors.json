@@ -11,7 +11,7 @@
         },
         "analytics_sha256": {
             "counts": "b10dbfdd96a300338664793f186b1430be2defbc7a96da01a0c1b0b079d621a8",
-            "wins": "29a63716eda303418e593ee2aa87a47373920af2f4369fa24e751fc5a9cd4670",
+            "wins": "473be6fc03f9477160ef9830c243a7804589546cb8699776832037c7becf0185",
             "volume": "225592f750de51a71c8cd369b49e909d51d39253e88546b26598c20926a9f827",
             "value": "efbcdc5cf81365d130295ab76c9b972a34e7c47287c557fe78d71333095f7194",
             "commission": "027f8adba75f07dc4000da78d6a03999c9d127f02d0bbebca20cd18e6d46b2b6",
@@ -40,7 +40,7 @@
         },
         "analytics_sha256": {
             "counts": "38d2435fb2c458accb373307e632d0a23b3abdbdd58ccc99cdd614914b2025ae",
-            "wins": "833b2361c259bd69e756007b4ef98d4f6fc080cd354af5d5774d29bd81ff64a5",
+            "wins": "853cee0c7d8650b04fb25154b9b0ff0b2d64b65e62aefc7b2cf9fc67a9fea04a",
             "volume": "238669c165df420ab781a08ceb4eaf0bbcace1230592aa8ac6e98844076a34ee",
             "value": "848cda38688cbbbe818630d630402360a4a0a1a829c0bd0ca03344af28f4ee04",
             "commission": "f02ef5b5e12eee7d2f7b3f60807273eae88179187a398fc891c65b202f0cc564",
@@ -98,7 +98,7 @@
         },
         "analytics_sha256": {
             "counts": "709c77b64c4446bc6c8aed9fc277ab189151a8c127101c5346b84a850d73f7d8",
-            "wins": "ee4cb85c87e251e378bf085dc3ceff31d6f14961093923bf0782a72e32a58dec",
+            "wins": "9d58aba28fc70dd047c9371e9a8db50ca05c539e3d34a522a4b85e55f0cecaa8",
             "volume": "a69cc36feac47b47fb82fd4f78a4551d6f6ad32f178f1efb8a7ec5cb91cb67bf",
             "value": "58891cb4862c5739671310527a0ad60cf96efce36531482c191ec886e7d9b89e",
             "commission": "d6c8881d3b00f6a8b1c03bdc34f0ab86f98933f554032d8d5b107c3a30c0f02d",
@@ -107,9 +107,9 @@
             "cumulative_return": "11463726f18788f1e06ec9ba998fb9add29c26d7edd323e146d37b0af7cb2303",
             "frequency": "03ffb8d6aa15fa268be91f432a69489e3b362d3c1dfa5c915011e7e2bcfb1959",
             "duration": "a5312ca0b991bf2e65dcc6de3e9abc71e1096c594114622b33ed191fc62b4b7d",
-            "streaks": "688bcf15ce900cb9de4d17fa21e50243db35eb50f4c0b20bb8a4815d11bedaa8",
-            "expectancy": "d15657e20ef2a623c620e084481358e807c022219fd7f2dbf3e5268e143d2a26",
-            "risk_reward_ratio": "4ca8e61b1c15824e87513d889227c2f1f8e5d443dead3774ed6b6d9b04489453",
+            "streaks": "1a068ef2ed3e0007fb94dd60c25e7793764724809d147a26cdef8d03ed3ff46c",
+            "expectancy": "cb7b21f6ac71e76a761cbb77b8f86d3f3fd0cde2ed9b38d815d7a463ccc84134",
+            "risk_reward_ratio": "5d0a7e95b3e7d2ca7c3cb3e01ce810b032f19740ea214eb2e3b9aea2834cea72",
             "win_rate_by_period": "1d2006a5b0b859c02616e21289319ec63d89862c963c196ed68496db71bd0a0d",
             "max_drawdown": "cff75e065bc9f8cc412e6d233a22918070ea4c6cfae41a23d50b4c671ea401ba",
             "risk_adjusted_returns": "14bf07dea7552bac73628d619a3b3fd0f05e466e3b7031a5d6f7e7e7c997892d"
@@ -156,7 +156,7 @@
         },
         "analytics_sha256": {
             "counts": "2acbee8322a7eea69897b01ca26c751ee426b475e5ac4eac2a446c5076828397",
-            "wins": "833b2361c259bd69e756007b4ef98d4f6fc080cd354af5d5774d29bd81ff64a5",
+            "wins": "a0701216fc34d13dea888b6f68a8411073b98a98143e9d9478dbc0f6b937bb12",
             "volume": "cbf5f5e716f30c7bb2c748407c0a7ee6d4657f8a000e6a814b1dcb3d8b777a22",
             "value": "f5406b19e41942dac5ca768108dd36d3c0a9ad5505b0f722cb96343ae7f0a641",
             "commission": "ed9ac32b9ba2b43638f6da1f2f3c87d3fc742335ac8f943adf114ccfddee3170",
@@ -185,7 +185,7 @@
         },
         "analytics_sha256": {
             "counts": "1f68426bccc618a65f78007c511a8301eb5aee51d81b7c798b87da5bfd33d85b",
-            "wins": "c673861b0b3d0ca6218d63490d40dac08cb1ad7f974c4f77b12b58dc8f9b329e",
+            "wins": "833b2361c259bd69e756007b4ef98d4f6fc080cd354af5d5774d29bd81ff64a5",
             "volume": "a97d2f526578cd0efca20971a0e99125665f5f64cf785bc6de0e330fd5670c33",
             "value": "bd54808cae20ae72612bb3027a9346991ab675823b255ff10be9389df924f2fa",
             "commission": "358e9e348c73ed0803b164d5664552bb7c0ca7b1024c60468eb2a19e2332d42e",
@@ -214,7 +214,7 @@
         },
         "analytics_sha256": {
             "counts": "546a72e296a32de7f01c8db6c748879f1411d30a238edbb79df8facaf9c8cbb2",
-            "wins": "6dccc21046094bf4f40bea927219bddc9cde3f7f0fe041d023b3664247252ece",
+            "wins": "b698a11eff13b76da234fe1820ad6319debd2fd57942be0e7c4832d4a8859668",
             "volume": "e6a12be72aaa7d7835040144b338a6c9fd3a52eafa57a469e87db247e38bda00",
             "value": "544f5c5c24a2e83a39cf911b8d36f4f570c12a3001bf71ff532ad973ce07420e",
             "commission": "9b2a3c01d3880a376d707ac6871461996529d825bff83ad58c2761699e657c53",
@@ -223,9 +223,9 @@
             "cumulative_return": "c3fe1b015159c93bbf51fef3ba9199b03dc76cf77ff84a58880243c00bc1e80e",
             "frequency": "78a34f4a40476e0bf81d1b7a7e7762d83de2764be8b703ccdd72c417b2691cf6",
             "duration": "4f1886230d495b6b4683deaabb318e0c090e97fe658849237a6919dbacc3fc6e",
-            "streaks": "700fe2ec327d08654ce141e32bf09b3dcd42130fc1478ff49c0d18b7822b63df",
-            "expectancy": "2aa718decdac4be89a2b78d25a8842a14e0d90224c833917f3410bae7933b41f",
-            "risk_reward_ratio": "b69fad02141678941eccae8772db7ff23d465f486503e0ae81befd97bcd0094d",
+            "streaks": "c63893525c5467b9763dc8ce184f78911814608057e76d6c4e7aa03beee2d1e5",
+            "expectancy": "5af9ded2f59ca8f6d9140bcbd9d6165c00629a7067aafaa35ed586937491a07f",
+            "risk_reward_ratio": "00c28945cd07987680e64527404b4c1f6b9ca23933f5e1b5aae0a59bc025b224",
             "win_rate_by_period": "04a4c3a8c7861dd1030aad055dd11a71db13410b34ecd630ce53509c0f41d1d1",
             "max_drawdown": "c20a8b8156a1e9877475006cb781f3df894456fa0c87f14cbcb742ac02038382",
             "risk_adjusted_returns": "8001770c4e79f69377c0fa6739fee0ddb08c2b548d4efa1302910567db04a751"
@@ -243,7 +243,7 @@
         },
         "analytics_sha256": {
             "counts": "709c77b64c4446bc6c8aed9fc277ab189151a8c127101c5346b84a850d73f7d8",
-            "wins": "ee4cb85c87e251e378bf085dc3ceff31d6f14961093923bf0782a72e32a58dec",
+            "wins": "9d58aba28fc70dd047c9371e9a8db50ca05c539e3d34a522a4b85e55f0cecaa8",
             "volume": "a69cc36feac47b47fb82fd4f78a4551d6f6ad32f178f1efb8a7ec5cb91cb67bf",
             "value": "58891cb4862c5739671310527a0ad60cf96efce36531482c191ec886e7d9b89e",
             "commission": "d6c8881d3b00f6a8b1c03bdc34f0ab86f98933f554032d8d5b107c3a30c0f02d",
@@ -252,9 +252,9 @@
             "cumulative_return": "11463726f18788f1e06ec9ba998fb9add29c26d7edd323e146d37b0af7cb2303",
             "frequency": "03ffb8d6aa15fa268be91f432a69489e3b362d3c1dfa5c915011e7e2bcfb1959",
             "duration": "a5312ca0b991bf2e65dcc6de3e9abc71e1096c594114622b33ed191fc62b4b7d",
-            "streaks": "688bcf15ce900cb9de4d17fa21e50243db35eb50f4c0b20bb8a4815d11bedaa8",
-            "expectancy": "d15657e20ef2a623c620e084481358e807c022219fd7f2dbf3e5268e143d2a26",
-            "risk_reward_ratio": "4ca8e61b1c15824e87513d889227c2f1f8e5d443dead3774ed6b6d9b04489453",
+            "streaks": "1a068ef2ed3e0007fb94dd60c25e7793764724809d147a26cdef8d03ed3ff46c",
+            "expectancy": "cb7b21f6ac71e76a761cbb77b8f86d3f3fd0cde2ed9b38d815d7a463ccc84134",
+            "risk_reward_ratio": "5d0a7e95b3e7d2ca7c3cb3e01ce810b032f19740ea214eb2e3b9aea2834cea72",
             "win_rate_by_period": "1d2006a5b0b859c02616e21289319ec63d89862c963c196ed68496db71bd0a0d",
             "max_drawdown": "cff75e065bc9f8cc412e6d233a22918070ea4c6cfae41a23d50b4c671ea401ba",
             "risk_adjusted_returns": "b79864902c7d8c2504c41dd62bbaf459bbf33e6c0648aca5d8b70ee72ec7d5d7"
@@ -272,7 +272,7 @@
         },
         "analytics_sha256": {
             "counts": "2acbee8322a7eea69897b01ca26c751ee426b475e5ac4eac2a446c5076828397",
-            "wins": "833b2361c259bd69e756007b4ef98d4f6fc080cd354af5d5774d29bd81ff64a5",
+            "wins": "a0701216fc34d13dea888b6f68a8411073b98a98143e9d9478dbc0f6b937bb12",
             "volume": "cbf5f5e716f30c7bb2c748407c0a7ee6d4657f8a000e6a814b1dcb3d8b777a22",
             "value": "f5406b19e41942dac5ca768108dd36d3c0a9ad5505b0f722cb96343ae7f0a641",
             "commission": "ed9ac32b9ba2b43638f6da1f2f3c87d3fc742335ac8f943adf114ccfddee3170",
@@ -301,7 +301,7 @@
         },
         "analytics_sha256": {
             "counts": "546a72e296a32de7f01c8db6c748879f1411d30a238edbb79df8facaf9c8cbb2",
-            "wins": "6dccc21046094bf4f40bea927219bddc9cde3f7f0fe041d023b3664247252ece",
+            "wins": "b698a11eff13b76da234fe1820ad6319debd2fd57942be0e7c4832d4a8859668",
             "volume": "e6a12be72aaa7d7835040144b338a6c9fd3a52eafa57a469e87db247e38bda00",
             "value": "544f5c5c24a2e83a39cf911b8d36f4f570c12a3001bf71ff532ad973ce07420e",
             "commission": "9b2a3c01d3880a376d707ac6871461996529d825bff83ad58c2761699e657c53",
@@ -310,9 +310,9 @@
             "cumulative_return": "c3fe1b015159c93bbf51fef3ba9199b03dc76cf77ff84a58880243c00bc1e80e",
             "frequency": "78a34f4a40476e0bf81d1b7a7e7762d83de2764be8b703ccdd72c417b2691cf6",
             "duration": "4f1886230d495b6b4683deaabb318e0c090e97fe658849237a6919dbacc3fc6e",
-            "streaks": "700fe2ec327d08654ce141e32bf09b3dcd42130fc1478ff49c0d18b7822b63df",
-            "expectancy": "2aa718decdac4be89a2b78d25a8842a14e0d90224c833917f3410bae7933b41f",
-            "risk_reward_ratio": "b69fad02141678941eccae8772db7ff23d465f486503e0ae81befd97bcd0094d",
+            "streaks": "c63893525c5467b9763dc8ce184f78911814608057e76d6c4e7aa03beee2d1e5",
+            "expectancy": "5af9ded2f59ca8f6d9140bcbd9d6165c00629a7067aafaa35ed586937491a07f",
+            "risk_reward_ratio": "00c28945cd07987680e64527404b4c1f6b9ca23933f5e1b5aae0a59bc025b224",
             "win_rate_by_period": "04a4c3a8c7861dd1030aad055dd11a71db13410b34ecd630ce53509c0f41d1d1",
             "max_drawdown": "c20a8b8156a1e9877475006cb781f3df894456fa0c87f14cbcb742ac02038382",
             "risk_adjusted_returns": "54661715d6715b968ba8d270e5155db22d016b477b8ed471593cc87d9856b91e"

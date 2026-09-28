@@ -81,3 +81,11 @@ Initial public release.
   nets to exactly 0 still appears in `toArray()`.
 - A trade without a commission counts as a zero commission (as the net P&L already read it), so
   it shows in the commission extremes and breakdowns as well as the per-trade average.
+- `wins` and the win ratio count closed trades only (open trades counted as wins and in the
+  denominator), so the win ratio agrees with `expectancy->winRate`; `Wins` no longer depends on
+  `Counts`. The ratio is listed for every key with a closed trade, a `0.00` included.
+- A break-even trade is neither a win nor a loss: it no longer dilutes the average loss of the
+  risk/reward ratio and the expectancy (new `Expectancy::$breakEvenTrades`), and it ends both
+  the winning and the losing streak instead of extending a losing one.
+- Expectancy is (realized gross profit − gross loss) / closed trades at full precision (it was
+  built from win / loss rates truncated to 4 decimals: 26.664 instead of 26.6666666666).

@@ -38,8 +38,9 @@ function mixedWinLossTrades(): LazyCollection
 it('computes expectancy from realized wins and losses', function () {
     $analytics = Analytics::make(mixedWinLossTrades())->calculate();
 
+    // (100 − 50 + 30) / 3, not (0.6666 × 65) − (0.3333 × 50) off 4-decimal rates.
     expect($analytics->expectancy->toArray())->toBe([
-        'value' => '26.6640000000',
+        'value' => '26.6666666666',
         'average_win' => '65.0000000000',
         'average_loss' => '50.0000000000',
         'win_rate' => '0.6666',

@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Illuminate\Support\LazyCollection;
 use RoundlyConsulting\TradingAnalytics\Analytics;
 use RoundlyConsulting\TradingAnalytics\Analytics\Counts;
+use RoundlyConsulting\TradingAnalytics\Analytics\Expectancy;
 use RoundlyConsulting\TradingAnalytics\Analytics\Streaks;
-use RoundlyConsulting\TradingAnalytics\Analytics\Wins;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 use RoundlyConsulting\TradingAnalytics\Exceptions\InvalidEngineException;
 use RoundlyConsulting\TradingAnalytics\Exceptions\InvalidTradeException;
@@ -61,10 +61,11 @@ it('calculates in one call', function (): void {
 });
 
 it('calculates only the requested metrics and their dependencies', function (): void {
-    $analytics = TradingAnalytics::calculate(tradeRows(), only: [Wins::class]);
+    $analytics = TradingAnalytics::calculate(tradeRows(), only: [Expectancy::class]);
 
-    expect($analytics->wins)->not->toBeNull()
-        ->and($analytics->counts)->not->toBeNull()
+    expect($analytics->expectancy)->not->toBeNull()
+        ->and($analytics->realizedProfitAndLoss)->not->toBeNull()
+        ->and($analytics->wins)->toBeNull()
         ->and($analytics->streaks)->toBeNull();
 });
 

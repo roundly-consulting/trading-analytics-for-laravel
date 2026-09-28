@@ -18,6 +18,11 @@ use RoundlyConsulting\TradingAnalytics\Facades\TradingAnalytics;
  * computation, cross-validated against the engine, then frozen (see the repo's
  * docs and the one-off builder used to generate it).
  *
+ * Corrected since (each figure recomputed independently from the fixture's trades): the
+ * win / loss / break-even counts and the win rate are over the closed trades (they counted
+ * open positions too), and `gross_profit` / `gross_loss` / `profit_factor` are the realized
+ * gross profit and loss (they summed every trade, open ones included).
+ *
  * @phpstan-type TradeRow array{
  *     base_currency: string,
  *     quote_currency: string,

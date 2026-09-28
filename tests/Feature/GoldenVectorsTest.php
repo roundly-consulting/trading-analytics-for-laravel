@@ -29,6 +29,10 @@ use RoundlyConsulting\TradingAnalytics\Tests\Support\TradeDatasets;
  *   (break-even trade, same-second trade, no commission) was taken for "unset" and overwritten
  *   as the highest / lowest; a cumulative return could never report a highest below 0; and a
  *   trade without a commission was skipped by the commission extremes (it now counts as 0).
+ * - `wins`, `streaks`, `expectancy`, `risk_reward_ratio` — open trades counted as wins and in
+ *   the win-ratio denominator, and a zero win ratio was dropped from the output; a break-even
+ *   trade counted as a loss (diluting the average loss, extending loss streaks); and the
+ *   expectancy was built from 4-decimal win / loss rates instead of the realized totals.
  *
  * @phpstan-type GoldenVector array{risk_adjusted_returns: array<string, string|int>, analytics_sha256: array<string, string>}
  */
