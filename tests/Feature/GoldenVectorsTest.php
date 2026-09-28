@@ -33,6 +33,8 @@ use RoundlyConsulting\TradingAnalytics\Tests\Support\TradeDatasets;
  *   the win-ratio denominator, and a zero win ratio was dropped from the output; a break-even
  *   trade counted as a loss (diluting the average loss, extending loss streaks); and the
  *   expectancy was built from 4-decimal win / loss rates instead of the realized totals.
+ * - `streaks` — BTC as the base of BTC/USD and BTC as the quote of ETH/BTC shared one running
+ *   streak (only the BTC breakdowns moved).
  *
  * @phpstan-type GoldenVector array{risk_adjusted_returns: array<string, string|int>, analytics_sha256: array<string, string>}
  */

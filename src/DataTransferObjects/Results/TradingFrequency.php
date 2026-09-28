@@ -6,13 +6,23 @@ namespace RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results;
 
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericByCurrency;
 
+/**
+ * How often trades are opened, globally and per pair / base / quote currency.
+ *
+ * The pass keeps, per key, only the number of opens and the earliest and latest open time:
+ * the average gap between consecutive opens is (latest − earliest) / (opens − 1) in any
+ * order, so the figure needs neither sorted input nor any per-trade history.
+ */
 final class TradingFrequency extends NumericByCurrency
 {
     /** @var array<string, int> */
-    protected array $lastTradeTimestamp = [];
+    protected array $opens = [];
 
     /** @var array<string, int> */
-    protected array $timeDifference = [];
+    protected array $earliest = [];
+
+    /** @var array<string, int> */
+    protected array $latest = [];
 
     public function __construct(int $scale = 1)
     {
@@ -30,31 +40,42 @@ final class TradingFrequency extends NumericByCurrency
         ];
     }
 
-    public function incrementTimeDifference(string $key, int $by): void
+    /** Fold one open time (a Unix timestamp) into a key. */
+    public function record(string $key, int $timestamp): void
     {
-        $this->setTimeDifference(
-            $key,
-            $this->getTimeDifference($key) + $by
-        );
+        $this->opens[$key] = ($this->opens[$key] ?? 0) + 1;
+        $this->earliest[$key] = min($this->earliest[$key] ?? $timestamp, $timestamp);
+        $this->latest[$key] = max($this->latest[$key] ?? $timestamp, $timestamp);
     }
 
-    public function setTimeDifference(string $key, int $difference): void
+    /** How many opens a key has seen. */
+    public function opens(string $key): int
     {
-        $this->timeDifference[$key] = $difference;
+        return $this->opens[$key] ?? 0;
     }
 
-    public function setLastTradeTimestamp(string $key, int $timestamp): void
+    /**
+     * The pairs or currencies recorded under one breakdown (`pair`, `base` or `quote`), in
+     * first-seen order.
+     *
+     * @return list<string>
+     */
+    public function keysOf(string $breakdown): array
     {
-        $this->lastTradeTimestamp[$key] = $timestamp;
+        $keys = [];
+
+        foreach (array_keys($this->opens) as $key) {
+            if (str_starts_with((string) $key, "{$breakdown}:")) {
+                $keys[] = substr((string) $key, strlen($breakdown) + 1);
+            }
+        }
+
+        return $keys;
     }
 
-    public function getTimeDifference(string $key): int
+    /** Seconds between a key's earliest and latest open. */
+    public function span(string $key): int
     {
-        return $this->timeDifference[$key] ?? 0;
-    }
-
-    public function getLastTradeTimestamp(string $key): int
-    {
-        return $this->lastTradeTimestamp[$key] ?? 0;
+        return ($this->latest[$key] ?? 0) - ($this->earliest[$key] ?? 0);
     }
 }

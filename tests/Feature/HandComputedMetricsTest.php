@@ -6,6 +6,7 @@ use Illuminate\Support\LazyCollection;
 use RoundlyConsulting\TradingAnalytics\Analytics;
 use RoundlyConsulting\TradingAnalytics\Analytics\ProfitFactor;
 use RoundlyConsulting\TradingAnalytics\Analytics\Streaks;
+use RoundlyConsulting\TradingAnalytics\Analytics\TradingFrequency;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 
 /**
@@ -246,4 +247,57 @@ it('breaks both streaks on a break-even trade', function (): void {
 
     expect($streaks?->wins->global->total->toRawString())->toBe('1')
         ->and($streaks?->losses->global->total->toRawString())->toBe('1');
+});
+
+it('measures trading frequency over the span of open times', function (): void {
+    // Four opens a day apart: 3 days over 3 gaps.
+    $frequency = handComputed()->frequency;
+
+    expect((string) $frequency?->total)->toBe('1.0 per day')
+        ->and((string) $frequency?->forPair('BTC/USD'))->toBe('1.0 per day')
+        ->and((string) $frequency?->forQuoteCurrency('USD'))->toBe('1.0 per day');
+});
+
+it('reads trading frequency the same whatever order the trades arrive in', function (): void {
+    $trades = [
+        Trade::make('BTC', 'USD', '1', '2', '1', 'buy', '2024-01-03 10:00:00'),
+        Trade::make('BTC', 'USD', '1', '2', '1', 'buy', '2024-01-01 10:00:00'),
+    ];
+
+    $frequency = Analytics::for(LazyCollection::make($trades))->only([TradingFrequency::class])->calculate()->frequency;
+
+    // Two days between the two opens, not a negative gap.
+    expect((string) $frequency?->total)->toBe('3.5 per week');
+});
+
+it('handles trades opened in the same second', function (): void {
+    $sameSecond = static fn (int $count, string $time): array => array_map(
+        static fn (): Trade => Trade::make('BTC', 'USD', '1', '2', '1', 'buy', $time),
+        range(1, $count),
+    );
+
+    $allAtOnce = Analytics::for(LazyCollection::make($sameSecond(3, '2024-01-01 10:00:00')))->only([TradingFrequency::class])->calculate();
+    $subSecond = Analytics::for(LazyCollection::make([...$sameSecond(2, '2024-01-01 10:00:00'), ...$sameSecond(1, '2024-01-01 10:00:01')]))->only([TradingFrequency::class])->calculate();
+
+    // No gap to measure: undefined, reported like a single trade (0, no unit).
+    expect((string) $allAtOnce->frequency?->total)->toBe('0.0')
+        // 1 s over 2 gaps is a trade every 0.5 s.
+        ->and((string) $subSecond->frequency?->total)->toBe('7200.0 per hour');
+});
+
+it('keeps a currency that is a base in one pair apart from the same currency as a quote', function (): void {
+    $analytics = Analytics::for(LazyCollection::make([
+        // BTC as the quote: two trades a day apart, both winners.
+        Trade::make('ETH', 'BTC', '1', '2', '1', 'buy', '2024-01-01 00:00:00', null, '2024-01-01 00:30:00'),
+        Trade::make('ETH', 'BTC', '1', '2', '1', 'buy', '2024-01-02 00:00:00', null, '2024-01-02 00:30:00'),
+        // BTC as the base: two trades an hour apart, both winners.
+        Trade::make('BTC', 'USDT', '1', '2', '1', 'buy', '2024-01-10 00:00:00', null, '2024-01-10 00:30:00'),
+        Trade::make('BTC', 'USDT', '1', '2', '1', 'buy', '2024-01-10 01:00:00', null, '2024-01-10 01:30:00'),
+    ]))->only([TradingFrequency::class, Streaks::class])->calculate();
+
+    expect((string) $analytics->frequency?->forQuoteCurrency('BTC'))->toBe('1.0 per day')
+        ->and((string) $analytics->frequency?->forBaseCurrency('BTC'))->toBe('1.0 per hour')
+        ->and($analytics->streaks?->wins->forQuoteCurrency('BTC')->total->toRawString())->toBe('2')
+        ->and($analytics->streaks?->wins->forBaseCurrency('BTC')->total->toRawString())->toBe('2')
+        ->and($analytics->streaks?->wins->global->total->toRawString())->toBe('4');
 });

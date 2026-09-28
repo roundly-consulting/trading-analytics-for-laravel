@@ -89,3 +89,9 @@ Initial public release.
   the winning and the losing streak instead of extending a losing one.
 - Expectancy is (realized gross profit − gross loss) / closed trades at full precision (it was
   built from win / loss rates truncated to 4 decimals: 26.664 instead of 26.6666666666).
+- Trading frequency no longer divides by zero (trades opened in the same second, or date-only
+  open times on one day, crashed every default run) and no longer reads `0.0 per hour` for
+  unsorted input: it is measured over the span of open times, in any order. No measurable gap
+  leaves it at 0 with no unit, like a single trade.
+- A currency that is the base of one pair and the quote of another (BTC in BTC/USDT and ETH/BTC)
+  no longer shares one frequency and one running streak between its two breakdowns.

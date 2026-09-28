@@ -49,22 +49,28 @@ class Streaks implements AnalyticsInterface
      * streak value it feeds. The value is only resolved for a win or a loss, so a break-even
      * trade materialises no empty breakdown entry.
      *
+     * Each breakdown has its own key namespace: BTC as the base of BTC/USDT and BTC as the
+     * quote of ETH/BTC run two streaks, not one.
+     *
      * @return array<string, callable(): NumericValueAsString>
      */
     protected static function scopes(NumericDirectionalByCurrency $longest, Trade $trade): array
     {
         $direction = $trade->direction->value;
+        $pair = $trade->pair();
+        $base = $trade->baseCurrency;
+        $quote = $trade->quoteCurrency;
         $side = static fn (NumericByDirections $counts): NumericValueAsString => $trade->direction->isBuy() ? $counts->buy : $counts->sell;
 
         return [
-            'total' => static fn (): NumericValueAsString => $longest->global->total,
-            $direction => static fn (): NumericValueAsString => $side($longest->global),
-            "{$trade->pair()}_total" => static fn (): NumericValueAsString => $longest->forPair($trade->pair())->total,
-            "{$trade->pair()}_{$direction}" => static fn (): NumericValueAsString => $side($longest->forPair($trade->pair())),
-            "{$trade->baseCurrency}_total" => static fn (): NumericValueAsString => $longest->forBaseCurrency($trade->baseCurrency)->total,
-            "{$trade->baseCurrency}_{$direction}" => static fn (): NumericValueAsString => $side($longest->forBaseCurrency($trade->baseCurrency)),
-            "{$trade->quoteCurrency}_total" => static fn (): NumericValueAsString => $longest->forQuoteCurrency($trade->quoteCurrency)->total,
-            "{$trade->quoteCurrency}_{$direction}" => static fn (): NumericValueAsString => $side($longest->forQuoteCurrency($trade->quoteCurrency)),
+            'global:total' => static fn (): NumericValueAsString => $longest->global->total,
+            "global:{$direction}" => static fn (): NumericValueAsString => $side($longest->global),
+            "pair:{$pair}:total" => static fn (): NumericValueAsString => $longest->forPair($pair)->total,
+            "pair:{$pair}:{$direction}" => static fn (): NumericValueAsString => $side($longest->forPair($pair)),
+            "base:{$base}:total" => static fn (): NumericValueAsString => $longest->forBaseCurrency($base)->total,
+            "base:{$base}:{$direction}" => static fn (): NumericValueAsString => $side($longest->forBaseCurrency($base)),
+            "quote:{$quote}:total" => static fn (): NumericValueAsString => $longest->forQuoteCurrency($quote)->total,
+            "quote:{$quote}:{$direction}" => static fn (): NumericValueAsString => $side($longest->forQuoteCurrency($quote)),
         ];
     }
 

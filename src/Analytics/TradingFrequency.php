@@ -9,59 +9,71 @@ use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
 
+/**
+ * How often trades are opened, expressed in the largest unit it fits (per hour, day, week,
+ * month or year). The average gap is taken over the span of open times, so the input order
+ * does not matter.
+ *
+ * Fewer than two trades, or trades that all opened in the same second, leave no gap to
+ * measure: the frequency stays 0 with no unit.
+ */
 class TradingFrequency implements AnalyticsInterface
 {
     public static function calculatePerTrade(Analytics $analytics, Trade $trade): void
     {
-        static::prepareTimestampsForKey($analytics, 'total', $trade);
-        static::prepareTimestampsForKey($analytics, $trade->pair(), $trade);
-        static::prepareTimestampsForKey($analytics, $trade->quoteCurrency, $trade);
-        static::prepareTimestampsForKey($analytics, $trade->baseCurrency, $trade);
+        $timestamp = $trade->openTime->getTimestamp();
+
+        foreach (static::keys($trade) as $key) {
+            $analytics->frequency->record($key, $timestamp);
+        }
     }
 
     public static function calculateAfterTrades(Analytics $analytics): void
     {
-        static::calculateFrequencyFor($analytics, $analytics->counts->global->total, $analytics->frequency->total, 'total');
+        $frequency = $analytics->frequency;
 
-        foreach ($analytics->counts->perPair as $pair => $count) {
-            static::calculateFrequencyFor($analytics, $count->total, $analytics->frequency->forPair($pair), $pair);
+        static::calculateFrequencyFor($analytics, 'global', $frequency->total);
+
+        foreach ($frequency->keysOf('pair') as $pair) {
+            static::calculateFrequencyFor($analytics, "pair:{$pair}", $frequency->forPair($pair));
         }
 
-        foreach ($analytics->counts->perQuoteCurrency as $quoteCurrency => $count) {
-            static::calculateFrequencyFor($analytics, $count->total, $analytics->frequency->forQuoteCurrency($quoteCurrency), $quoteCurrency);
+        foreach ($frequency->keysOf('base') as $baseCurrency) {
+            static::calculateFrequencyFor($analytics, "base:{$baseCurrency}", $frequency->forBaseCurrency($baseCurrency));
         }
 
-        foreach ($analytics->counts->perBaseCurrency as $baseCurrency => $count) {
-            static::calculateFrequencyFor($analytics, $count->total, $analytics->frequency->forBaseCurrency($baseCurrency), $baseCurrency);
+        foreach ($frequency->keysOf('quote') as $quoteCurrency) {
+            static::calculateFrequencyFor($analytics, "quote:{$quoteCurrency}", $frequency->forQuoteCurrency($quoteCurrency));
         }
     }
 
-    protected static function prepareTimestampsForKey(Analytics $analytics, string $key, Trade $trade): void
+    /**
+     * The keys a trade is counted under. Each breakdown has its own namespace, so BTC as the
+     * base of BTC/USDT and BTC as the quote of ETH/BTC are two keys, not one.
+     *
+     * @return list<string>
+     */
+    protected static function keys(Trade $trade): array
     {
-        $lastTimestamp = $analytics->frequency->getLastTradeTimestamp($key);
-
-        if ($lastTimestamp !== 0) {
-            $analytics->frequency->incrementTimeDifference(
-                key: $key,
-                by: $trade->openTime->getTimestamp() - $lastTimestamp
-            );
-        }
-
-        $analytics->frequency->setLastTradeTimestamp(key: $key, timestamp: $trade->openTime->getTimestamp());
+        return ['global', "pair:{$trade->pair()}", "base:{$trade->baseCurrency}", "quote:{$trade->quoteCurrency}"];
     }
 
-    protected static function calculateFrequencyFor(Analytics $analytics, NumericValueAsString $count, NumericValueAsString $dto, string $key): void
+    protected static function calculateFrequencyFor(Analytics $analytics, string $key, NumericValueAsString $dto): void
     {
-        if ($count->isGreaterThan(1)) {
-            $frequency = static::calculateFrequency(
-                (int) floor($analytics->frequency->getTimeDifference($key) / ($count->toInt() - 1))
-            );
+        $opens = $analytics->frequency->opens($key);
+        $span = $analytics->frequency->span($key);
 
-            $dto->set($frequency)->suffix($frequency->suffix);
+        if ($opens < 2 || $span === 0) {
+            return;
         }
+
+        $frequency = static::calculateFrequency($span / ($opens - 1));
+
+        $dto->set($frequency)->suffix($frequency->suffix);
     }
 
-    protected static function calculateFrequency(int $difference): NumericValueAsString
+    /** @param  float  $gap  the average seconds between two opens, above zero */
+    protected static function calculateFrequency(float $gap): NumericValueAsString
     {
         $secondsInHour = 60 * 60;
         $secondsInDay = $secondsInHour * 24;
@@ -69,27 +81,14 @@ class TradingFrequency implements AnalyticsInterface
         $secondsInMonth = $secondsInDay * 31;
         $secondsInYear = $secondsInMonth * 12;
 
-        return match (true) {
-            $difference <= $secondsInHour => new NumericValueAsString(
-                value: round($secondsInHour / $difference, 1),
-                suffix: 'per hour',
-            ),
-            $difference <= $secondsInDay => new NumericValueAsString(
-                value: round($secondsInDay / $difference, 1),
-                suffix: 'per day',
-            ),
-            $difference <= $secondsInWeek => new NumericValueAsString(
-                value: round($secondsInWeek / $difference, 1),
-                suffix: 'per week',
-            ),
-            $difference <= $secondsInMonth => new NumericValueAsString(
-                value: round($secondsInMonth / $difference, 1),
-                suffix: 'per month',
-            ),
-            default => new NumericValueAsString(
-                value: round($secondsInYear / $difference, 1),
-                suffix: 'per year',
-            ),
+        [$unit, $suffix] = match (true) {
+            $gap <= $secondsInHour => [$secondsInHour, 'per hour'],
+            $gap <= $secondsInDay => [$secondsInDay, 'per day'],
+            $gap <= $secondsInWeek => [$secondsInWeek, 'per week'],
+            $gap <= $secondsInMonth => [$secondsInMonth, 'per month'],
+            default => [$secondsInYear, 'per year'],
         };
+
+        return new NumericValueAsString(value: round($unit / $gap, 1), suffix: $suffix);
     }
 }

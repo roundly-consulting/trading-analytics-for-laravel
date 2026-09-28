@@ -120,7 +120,6 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
      * @var array<class-string<AnalyticsInterface>, list<class-string<AnalyticsInterface>>>
      */
     protected array $dependencies = [
-        Analytics\TradingFrequency::class => [Analytics\Counts::class],
         Analytics\ProfitFactor::class => [Analytics\RealizedGrossProfitAndLoss::class],
         Analytics\Expectancy::class => [Analytics\RealizedGrossProfitAndLoss::class],
         Analytics\RiskRewardRatio::class => [Analytics\RealizedGrossProfitAndLoss::class],
