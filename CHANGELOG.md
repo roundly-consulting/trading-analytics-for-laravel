@@ -24,5 +24,13 @@ Initial public release.
 - `only()` / `except()` to run just the metrics you need, with dependencies resolved automatically.
 - JSON-ready results (`Arrayable`, `Jsonable`, `JsonSerializable`) for API responses.
 - Extension points: custom calculators and per-trade / after-trades hooks.
-- An optional `TradingAnalytics` facade and `Direction` / `Period` enums with select and
-  validation helpers.
+- The `TradingAnalytics` facade over an injectable `TradingAnalyticsManager`:
+  `for($trades)` and `calculate($trades, only: [...])` accept `Trade` objects, rows or a mix;
+  `trades($rows)`, `metrics()`, and `using(MyAnalytics::class)` / `engine()` to build every engine
+  from your `Analytics` subclass (`InvalidEngineException` otherwise).
+- `Direction` / `Period` enums with select and validation helpers.
+
+### Changed
+
+- The facade resolves `TradingAnalyticsManager` (was the `'trading-analytics'` container key
+  bound to `AnalyticsFactory`, which is gone); its `make()` is dropped in favour of `for()`.

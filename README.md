@@ -124,7 +124,7 @@ $trades = Trade::collect(
     DB::table('trades')->lazy() // each row is the array shape shown above
 );
 
-$analytics = Analytics::make($trades)->calculate();
+$analytics = TradingAnalytics::calculate($trades);
 ```
 
 `Trade::collect()` also accepts already-built `Trade` instances and mixes both freely.
@@ -147,24 +147,57 @@ $trade = new Trade(
 
 ### Running the engine
 
-```php
-use RoundlyConsulting\TradingAnalytics\Analytics;
+The `TradingAnalytics` facade takes any iterable of trades — `Trade` objects, rows in the
+`Trade::fromArray()` shape, or a mix — and maps rows lazily:
 
-$analytics = Analytics::make($trades)
+```php
+use RoundlyConsulting\TradingAnalytics\Facades\TradingAnalytics;
+
+// Build, configure, run
+$analytics = TradingAnalytics::for($trades)
     ->scale(5)        // arbitrary precision (decimal places), default 10
     ->calculate();    // returns the Analytics instance
+
+// Or build and run in one call, optionally restricted to some metrics
+$analytics = TradingAnalytics::calculate(DB::table('trades')->lazy());
+$analytics = TradingAnalytics::calculate($rows, only: [Counts::class, Streaks::class]);
 
 $analytics->hasBeenCalculated(); // true
 $analytics->toArray();           // the full result matrix as a nested array
 ```
 
-`Analytics::for($trades)` is an alias for `make()`. You can also resolve the optional facade:
+| Facade method | Returns | Purpose |
+|---|---|---|
+| `for(iterable $trades)` | `Analytics` | build the engine for trades or rows, ready to configure |
+| `calculate(iterable $trades, ?array $only = null)` | `Analytics` | build and run it, optionally only some calculators |
+| `trades(iterable $rows)` | `LazyCollection<int, Trade>` | map rows to trades lazily (same as `Trade::collect()`) |
+| `metrics()` | `list<class-string>` | the calculators the engine runs — what `only` / `except()` accept |
+| `using(string $analytics)` | `TradingAnalyticsManager` | build every engine from your `Analytics` subclass (see [Extending](#extending)) |
+| `engine()` | `class-string<Analytics>` | the engine class in use |
+
+There is no `TradingAnalytics::fake()`: the engine is a pure calculation with no side effects,
+so a test feeds it the trades it needs and asserts on the numbers.
+
+#### Without the facade
+
+The facade is a thin layer over `RoundlyConsulting\TradingAnalytics\TradingAnalyticsManager`,
+a container singleton. Inject it for the same API, or use the engine class directly:
 
 ```php
-use RoundlyConsulting\TradingAnalytics\Facades\TradingAnalytics;
+use RoundlyConsulting\TradingAnalytics\Analytics;
+use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
+use RoundlyConsulting\TradingAnalytics\TradingAnalyticsManager;
 
-$analytics = TradingAnalytics::make($trades)->calculate();
+public function __construct(private TradingAnalyticsManager $analytics) {}
+
+$this->analytics->calculate($rows)->toArray();
+
+// The engine itself — takes a LazyCollection of Trade objects
+Analytics::for(Trade::collect($rows))->calculate();
 ```
+
+The package has no action classes: it is a stateless calculation engine, and the manager only
+normalises the input and builds the engine.
 
 ### Running only the metrics you need
 
@@ -174,7 +207,8 @@ Pass the calculator classes you want; their dependencies are pulled in automatic
 use RoundlyConsulting\TradingAnalytics\Analytics\Counts;
 use RoundlyConsulting\TradingAnalytics\Analytics\Streaks;
 
-$analytics = Analytics::make($trades)->only([Counts::class])->calculate();
+$analytics = TradingAnalytics::calculate($trades, only: [Counts::class]);
+$analytics = Analytics::make($trades)->only([Counts::class])->calculate(); // same, on the engine
 // $analytics->counts is populated; metrics you didn't request stay null
 
 $analytics = Analytics::make($trades)->except([Streaks::class])->calculate();
@@ -184,7 +218,7 @@ Passing a class that is not a registered calculator throws an `UnknownCalculator
 discover what `only()` / `except()` accept, call `metrics()`:
 
 ```php
-$available = Analytics::make($trades)->metrics(); // list of calculator class-strings
+$available = TradingAnalytics::metrics(); // list of calculator class-strings
 ```
 
 ## Result accessors
@@ -286,8 +320,20 @@ Dividing by zero throws a `DivisionByZeroException`, passing a non-numeric strin
 ## Extending
 
 `Analytics` and the calculators in `RoundlyConsulting\TradingAnalytics\Analytics\*` are designed
-to be extended — subclass `Analytics` to register custom calculators, or override the per-trade /
-after-trades hooks per instance:
+to be extended — subclass `Analytics` to register custom calculators, and tell the facade to build
+your subclass (once, e.g. in a service provider's `boot()`; the manager is a singleton):
+
+```php
+use App\Analytics\DeskAnalytics; // extends RoundlyConsulting\TradingAnalytics\Analytics
+
+TradingAnalytics::using(DeskAnalytics::class);
+
+TradingAnalytics::calculate($trades); // a DeskAnalytics instance
+```
+
+`using()` throws `InvalidEngineException` for a class that isn't `Analytics` or a subclass of it.
+
+Or override the per-trade / after-trades hooks per instance:
 
 ```php
 $analytics = Analytics::make($trades)
@@ -312,7 +358,8 @@ so you can catch them all with one `catch`:
 - `InvalidScaleException` — negative scale.
 - `InvalidNumericOperationException` — non-numeric input or a fractional `pow()` exponent.
 - `DivisionByZeroException` — division by zero.
-- `UnknownCalculatorException` — `only()` / `except()` given a non-calculator class.
+- `UnknownCalculatorException` — `only()` / `except()` / `calculate(only: …)` given a non-calculator class.
+- `InvalidEngineException` — `TradingAnalytics::using()` given a class that isn't an `Analytics` engine.
 
 ## Integrates with
 
