@@ -29,8 +29,30 @@ Initial public release.
   `trades($rows)`, `metrics()`, and `using(MyAnalytics::class)` / `engine()` to build every engine
   from your `Analytics` subclass (`InvalidEngineException` otherwise).
 - `Direction` / `Period` enums with select and validation helpers.
+- Query sources: `TradingAnalytics::for()` / `calculate()` / `trades()` accept a query builder, an
+  Eloquent builder or a relation and stream it with `lazy($chunk)` (new `chunk` argument, default
+  1000). A query without an `orderBy` throws `UnorderedTradeSourceException` (the metrics are
+  order-sensitive, so no order is guessed); a chunk below 1 throws `InvalidChunkSizeException`.
+- `Trade::fromRow()` reads arrays, query-builder `stdClass` rows, Eloquent models (through their
+  casts and accessors), `Arrayable`s and plain objects; `Trade::collect()` and the facade use it.
+  `Trade::make()` takes any `DateTimeInterface` and any string-backed enum direction.
 
 ### Changed
 
+- Sharpe and Sortino are computed from running sums in constant memory. `RiskAdjustedReturns`
+  (the result) no longer has a `$returns` list: it exposes `$sampleSize`, `$sumOfReturns`,
+  `$sumOfSquaredReturns` and `$sumOfSquaredShortfalls`, and `recordReturn()` folds a return in
+  instead of storing it. Every reported figure is unchanged.
+- A null required field or a field of the wrong type throws `InvalidTradeException` (was a
+  `TypeError`).
 - The facade resolves `TradingAnalyticsManager` (was the `'trading-analytics'` container key
   bound to `AnalyticsFactory`, which is gone); its `make()` is dropped in favour of `for()`.
+
+### Fixed
+
+- The README's `Trade::collect(DB::table('trades')->lazy())` example crashed twice over: rows are
+  `stdClass`, which only arrays were accepted as, and `lazy()` refuses an unordered query.
+- The average cumulative return no longer stalls short of its root: `BcMath::nthRoot()` seeded
+  Newton's method at 1, so a large growth factor (e.g. 1,000× over 1,000 trades) came back far too
+  high. Its intermediates also grew with the trade count (a 50,000-trade root took ~17 s); they now
+  stay at a fixed scale.

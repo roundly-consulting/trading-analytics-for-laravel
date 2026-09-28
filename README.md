@@ -22,10 +22,11 @@
 Calculate trading performance analytics — P&L, returns, drawdown, expectancy, risk-adjusted
 ratios and more — for Laravel, with arbitrary-precision `bcmath` arithmetic.
 
-Feed it a `LazyCollection` of `Trade` objects and it computes a full matrix of trading
+Feed it trades, database rows or an ordered query and it computes a full matrix of trading
 performance metrics, broken down globally and per trading pair / base currency / quote currency.
 Every amount is computed with `bcmath` and returned as a string-backed value object, so there is
-no floating-point drift.
+no floating-point drift. The engine makes a single pass over the trades and holds no per-trade
+history, so memory stays flat however long the history is.
 
 ## Requirements
 
@@ -97,7 +98,7 @@ $trade = Trade::make(
 );
 ```
 
-Building from an array (e.g. a database row or API payload) is the documented ingestion boundary:
+Building from an array (e.g. an API payload):
 
 ```php
 $trade = Trade::fromArray([
@@ -113,21 +114,28 @@ $trade = Trade::fromArray([
 ]);
 ```
 
-A missing required key throws `InvalidTradeException`, as does an unknown `direction`. Currencies
-must be non-empty and a realized trade's close time must not be before its open time.
+A missing (or null) required key throws `InvalidTradeException`, as does a field of the wrong type
+or an unknown `direction`. Currencies must be non-empty and a realized trade's close time must not
+be before its open time.
 
-Stream trades lazily from the database with `Trade::collect()` so the whole history never sits in
-memory at once:
+`Trade::fromRow()` reads a row of any shape your app produces — an array, a query-builder
+`stdClass` row, an Eloquent model, any `Arrayable`, or a plain object's public properties:
 
 ```php
-$trades = Trade::collect(
-    DB::table('trades')->lazy() // each row is the array shape shown above
-);
-
-$analytics = TradingAnalytics::calculate($trades);
+$trade = Trade::fromRow(DB::table('trades')->find($id));   // stdClass row
+$trade = Trade::fromRow(TradeRecord::findOrFail($id));      // your Eloquent model
 ```
 
-`Trade::collect()` also accepts already-built `Trade` instances and mixes both freely.
+A model is read attribute by attribute, so its casts apply: a `direction` cast to your own
+string-backed enum (values `buy` / `sell`) and dates cast to `datetime` or `immutable_datetime`
+work as they are. Columns named differently? Expose the field through an accessor — e.g. an
+`openTime()` `Attribute` over your `opened_at` column.
+
+`Trade::collect()` maps any iterable of rows (or `Trade`s, or a mix) lazily:
+
+```php
+$trades = Trade::collect(DB::table('trades')->orderBy('close_time')->orderBy('id')->lazy());
+```
 
 For full control you can still construct a `Trade` directly with `NumericValueAsString` fields:
 
@@ -147,8 +155,9 @@ $trade = new Trade(
 
 ### Running the engine
 
-The `TradingAnalytics` facade takes any iterable of trades — `Trade` objects, rows in the
-`Trade::fromArray()` shape, or a mix — and maps rows lazily:
+The `TradingAnalytics` facade takes a **trade source**: any iterable of trades or rows (anything
+`Trade::fromRow()` reads, `Trade` objects included, or a mix), or a query — see
+[Reading trades from your database](#reading-trades-from-your-database). Rows are mapped lazily:
 
 ```php
 use RoundlyConsulting\TradingAnalytics\Facades\TradingAnalytics;
@@ -159,7 +168,7 @@ $analytics = TradingAnalytics::for($trades)
     ->calculate();    // returns the Analytics instance
 
 // Or build and run in one call, optionally restricted to some metrics
-$analytics = TradingAnalytics::calculate(DB::table('trades')->lazy());
+$analytics = TradingAnalytics::calculate(DB::table('trades')->orderBy('close_time')->orderBy('id'));
 $analytics = TradingAnalytics::calculate($rows, only: [Counts::class, Streaks::class]);
 
 $analytics->hasBeenCalculated(); // true
@@ -168,12 +177,15 @@ $analytics->toArray();           // the full result matrix as a nested array
 
 | Facade method | Returns | Purpose |
 |---|---|---|
-| `for(iterable $trades)` | `Analytics` | build the engine for trades or rows, ready to configure |
-| `calculate(iterable $trades, ?array $only = null)` | `Analytics` | build and run it, optionally only some calculators |
-| `trades(iterable $rows)` | `LazyCollection<int, Trade>` | map rows to trades lazily (same as `Trade::collect()`) |
+| `for($trades, int $chunk = 1000)` | `Analytics` | build the engine for a trade source, ready to configure |
+| `calculate($trades, ?array $only = null, int $chunk = 1000)` | `Analytics` | build and run it, optionally only some calculators |
+| `trades($rows, int $chunk = 1000)` | `LazyCollection<int, Trade>` | map a trade source to trades lazily |
 | `metrics()` | `list<class-string>` | the calculators the engine runs — what `only` / `except()` accept |
 | `using(string $analytics)` | `TradingAnalyticsManager` | build every engine from your `Analytics` subclass (see [Extending](#extending)) |
 | `engine()` | `class-string<Analytics>` | the engine class in use |
+
+`$trades` is an iterable, a query builder, an Eloquent builder or a relation; `$chunk` is the page
+size when it is a query.
 
 There is no `TradingAnalytics::fake()`: the engine is a pure calculation with no side effects,
 so a test feeds it the trades it needs and asserts on the numbers.
@@ -198,6 +210,40 @@ Analytics::for(Trade::collect($rows))->calculate();
 
 The package has no action classes: it is a stateless calculation engine, and the manager only
 normalises the input and builds the engine.
+
+### Reading trades from your database
+
+Pass the query itself — a query builder, an Eloquent builder or a relation — and the package
+streams it with `lazy()`, holding one page of rows in memory at a time:
+
+```php
+use Illuminate\Support\Facades\DB;
+
+TradingAnalytics::calculate(
+    DB::table('trades')->where('user_id', $user->id)->orderBy('close_time')->orderBy('id'),
+);
+
+// TradeRecord: your own Eloquent model
+TradingAnalytics::for(TradeRecord::query()->where('account_id', $accountId)->oldest('close_time')->orderBy('id'));
+
+TradingAnalytics::calculate($account->trades()->orderBy('close_time')->orderBy('id'), chunk: 500);
+```
+
+- **Order the query.** The equity curve, maximum drawdown, streaks and running cumulative returns
+  follow the order the trades arrive in, so the package never guesses one: a query without an
+  `orderBy` throws `UnorderedTradeSourceException` before anything runs — including an Eloquent
+  builder, which Laravel would otherwise quietly order by its primary key. Order chronologically,
+  with a unique tie-breaker: `->orderBy('close_time')->orderBy('id')`.
+- **Chunk size.** `chunk` (default `1000`) is the number of rows per page; a value below 1 throws
+  `InvalidChunkSizeException`. Memory scales with the chunk, never with the table.
+- **Paging.** `lazy()` pages with `LIMIT` / `OFFSET`, so every page re-runs the ordered query and
+  skips the rows before it. On very large tables, order by an indexed column (e.g. an index on
+  `(close_time, id)`) so each page stays cheap.
+- Your builder is left untouched: the package pages a clone.
+
+Rows come back as `stdClass` (query builder) or models (Eloquent) and are read with
+`Trade::fromRow()`, so the columns — or model accessors — must provide the `Trade::fromArray()`
+fields.
 
 ### Running only the metrics you need
 
@@ -346,15 +392,19 @@ $analytics = Analytics::make($trades)
     ->calculate();
 ```
 
-Sharpe and Sortino are computed on a separate multi-pass path (they need the full per-trade return
-series for variance); the single-pass aggregate calculators stay free of that concern.
+Sharpe and Sortino use the separate multi-pass hooks: each realized return is folded into running
+sums (count, sum, sum of squares, sum of squared shortfalls) during the pass, and the mean,
+population standard deviation and downside deviation are derived from those sums afterwards — no
+return series is stored.
 
 ## Exceptions
 
 Every exception extends `RoundlyConsulting\TradingAnalytics\Exceptions\TradingAnalyticsException`,
 so you can catch them all with one `catch`:
 
-- `InvalidTradeException` — empty currency, close-before-open, a missing required array key, or an invalid direction.
+- `InvalidTradeException` — empty currency, close-before-open, a missing or null required field, a field of the wrong type, or an invalid direction.
+- `UnorderedTradeSourceException` — a query passed as a trade source without an `orderBy`.
+- `InvalidChunkSizeException` — a `chunk` below 1.
 - `InvalidScaleException` — negative scale.
 - `InvalidNumericOperationException` — non-numeric input or a fractional `pow()` exponent.
 - `DivisionByZeroException` — division by zero.
