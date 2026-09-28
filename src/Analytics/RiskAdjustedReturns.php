@@ -6,20 +6,20 @@ namespace RoundlyConsulting\TradingAnalytics\Analytics;
 
 use RoundlyConsulting\TradingAnalytics\Analytics;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
+use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results\RiskAdjustedReturns as RiskAdjustedReturnsResult;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 use RoundlyConsulting\TradingAnalytics\Interfaces\MultiPassAnalyticsInterface;
 use RoundlyConsulting\TradingAnalytics\Support\BcMath;
 
 /**
- * Sharpe and Sortino ratios. Unlike the single-pass aggregate calculators these
- * need the full per-trade return series to compute variance, so they live on the
- * package's separated multi-pass path: the series is gathered during the pass
- * and the variance / deviation work happens once over that stored series in
- * {@see calculateAfterTrades()}.
+ * Sharpe and Sortino ratios in constant memory. The pass folds each realized net return into
+ * running sums (count, Σr, Σr², Σ shortfall²); {@see calculateAfterTrades()} derives the mean,
+ * the population standard deviation and the downside deviation from those sums alone, so the
+ * per-trade return series is never held.
  */
 class RiskAdjustedReturns implements MultiPassAnalyticsInterface
 {
-    protected const WORK_SCALE = 20;
+    protected const WORK_SCALE = RiskAdjustedReturnsResult::WORK_SCALE;
 
     public static function calculatePerTrade(Analytics $analytics, Trade $trade): void
     {
@@ -38,21 +38,21 @@ class RiskAdjustedReturns implements MultiPassAnalyticsInterface
     {
         $result = $analytics->riskAdjustedReturns;
 
-        if ($result === null || $result->returns === []) {
+        if ($result === null || $result->sampleSize === 0) {
             return;
         }
 
-        $count = count($result->returns);
+        $count = $result->sampleSize;
 
-        $mean = static::mean($result->returns, $count);
+        $mean = $result->sumOfReturns->divide(value: $count, immutable: true);
         $result->meanReturn->set($mean);
 
         $excess = $mean->subtract(value: $result->riskFreeRate, immutable: true);
 
-        $standardDeviation = static::standardDeviation($result->returns, $mean, $count);
+        $standardDeviation = static::standardDeviation($result, $mean, $count);
         $result->standardDeviation->set($standardDeviation);
 
-        $downsideDeviation = static::downsideDeviation($result->returns, $result->riskFreeRate, $count);
+        $downsideDeviation = static::downsideDeviation($result, $count);
         $result->downsideDeviation->set($downsideDeviation);
 
         if ($standardDeviation->isPositiveNonZero()) {
@@ -69,34 +69,22 @@ class RiskAdjustedReturns implements MultiPassAnalyticsInterface
     }
 
     /**
-     * @param  list<NumericValueAsString>  $returns
-     */
-    protected static function mean(array $returns, int $count): NumericValueAsString
-    {
-        $sum = new NumericValueAsString(scale: self::WORK_SCALE);
-
-        foreach ($returns as $return) {
-            $sum->add($return);
-        }
-
-        return $sum->divide(value: $count, immutable: true);
-    }
-
-    /**
-     * Population standard deviation, computed in bcmath.
+     * Population standard deviation from the running sums.
      *
-     * @param  list<NumericValueAsString>  $returns
+     * Σ(r − m)² = Σr² − 2m·Σr + n·m², evaluated exactly at the square scale against the same
+     * truncated mean `m` the result reports, then divided by n and rooted in bcmath.
      */
-    protected static function standardDeviation(array $returns, NumericValueAsString $mean, int $count): NumericValueAsString
+    protected static function standardDeviation(RiskAdjustedReturnsResult $result, NumericValueAsString $mean, int $count): NumericValueAsString
     {
-        $sumSquares = new NumericValueAsString(scale: self::WORK_SCALE);
+        $mean = $mean->cloneWithScale(RiskAdjustedReturnsResult::SQUARE_SCALE);
 
-        foreach ($returns as $return) {
-            $deviation = $return->subtract(value: $mean, immutable: true);
-            $sumSquares->add($deviation->multiply(value: $deviation, immutable: true));
-        }
+        $sumOfSquaredDeviations = $result->sumOfSquaredReturns
+            ->subtract(value: $mean->multiply(value: $result->sumOfReturns, immutable: true)->multiply(value: 2), immutable: true)
+            ->add(value: $mean->multiply(value: $mean, immutable: true)->multiply(value: $count));
 
-        $variance = $sumSquares->divide(value: $count, immutable: true);
+        $variance = $sumOfSquaredDeviations
+            ->divide(value: $count)
+            ->cloneWithScale(self::WORK_SCALE);
 
         return new NumericValueAsString(
             value: BcMath::sqrt($variance->toRawString(), self::WORK_SCALE),
@@ -105,25 +93,11 @@ class RiskAdjustedReturns implements MultiPassAnalyticsInterface
     }
 
     /**
-     * Downside deviation against the risk-free rate (Sortino denominator).
-     *
-     * @param  list<NumericValueAsString>  $returns
+     * Downside deviation against the risk-free rate (the Sortino denominator).
      */
-    protected static function downsideDeviation(array $returns, NumericValueAsString $riskFreeRate, int $count): NumericValueAsString
+    protected static function downsideDeviation(RiskAdjustedReturnsResult $result, int $count): NumericValueAsString
     {
-        $sumSquares = new NumericValueAsString(scale: self::WORK_SCALE);
-
-        foreach ($returns as $return) {
-            $shortfall = $return->subtract(value: $riskFreeRate, immutable: true);
-
-            if (! $shortfall->isLessThan(0)) {
-                continue;
-            }
-
-            $sumSquares->add($shortfall->multiply(value: $shortfall, immutable: true));
-        }
-
-        $variance = $sumSquares->divide(value: $count, immutable: true);
+        $variance = $result->sumOfSquaredShortfalls->divide(value: $count, immutable: true);
 
         return new NumericValueAsString(
             value: BcMath::sqrt($variance->toRawString(), self::WORK_SCALE),

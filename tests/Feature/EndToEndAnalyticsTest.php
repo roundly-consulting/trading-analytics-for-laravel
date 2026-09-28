@@ -272,8 +272,8 @@ it('matches the fixture sharpe and sortino ratios and series length', function (
     $risk = $analytics->riskAdjustedReturns;
     $expected = analyticsFixture()['expected'];
 
-    // The series is gathered from realized trades only.
-    expect($risk->returns)->toHaveCount($expected['returns_count']);
+    // Only realized trades feed the return sums.
+    expect($risk->sampleSize)->toBe($expected['returns_count']);
 
     expect((string) $risk->sharpeRatio)->toBe($expected['sharpe_ratio'])
         ->and((string) $risk->sortinoRatio)->toBe($expected['sortino_ratio'])
@@ -296,8 +296,8 @@ it('holds the structural self-consistency invariants from the engine output', fu
     expect($wins)->toBeLessThanOrEqual($total)
         ->and($wins)->toBeGreaterThanOrEqual(0);
 
-    // The realized return series size equals the number of closed trades read from
-    // storage (open positions contribute to unrealized figures, not the series).
+    // The realized sample size equals the number of closed trades read from storage
+    // (open positions contribute to unrealized figures, not the return sums).
     $closed = DB::table('trades')->whereNotNull('closed_at')->count();
-    expect($analytics->riskAdjustedReturns->returns)->toHaveCount($closed);
+    expect($analytics->riskAdjustedReturns->sampleSize)->toBe($closed);
 });

@@ -6,6 +6,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\LazyCollection;
 use RoundlyConsulting\TradingAnalytics\Analytics;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
+use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results\RiskAdjustedReturns;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 use RoundlyConsulting\TradingAnalytics\Enums\Direction;
 use RoundlyConsulting\TradingAnalytics\Enums\Period;
@@ -120,4 +121,39 @@ it('ignores open trades in the new metrics', function () {
     expect($analytics->expectancy->winningTrades)->toBe(0)
         ->and($analytics->riskRewardRatio->winningTrades)->toBe(0)
         ->and($analytics->riskAdjustedReturns->toArray()['sample_size'])->toBe(0);
+});
+
+it('averages the cumulative return of a long winning run', function () {
+    // 1,000 trades of +1% each compound to ~20,959×. The geometric mean used to stall 100
+    // Newton steps short of the 1,000th root and report an average of thousands of percent.
+    $trades = LazyCollection::times(1000, static fn (int $i): Trade => Trade::make(
+        baseCurrency: 'BTC',
+        quoteCurrency: 'USD',
+        openPrice: '100',
+        closePrice: '101',
+        size: '1',
+        direction: Direction::BUY,
+        openTime: Carbon::create(2024, 1, 1)->addMinutes($i),
+        closeTime: Carbon::create(2024, 1, 1)->addMinutes($i + 1),
+    ));
+
+    $average = Analytics::make($trades)->only([Analytics\GrossCumulativeReturn::class])->calculate()
+        ->cumulativeReturn?->gross->global->total->average;
+
+    expect((string) $average)->toBe('1.00');
+});
+
+it('folds each realized return into running sums instead of storing it', function () {
+    $result = new RiskAdjustedReturns(NumericValueAsString::of('0.01'));
+
+    foreach (['0.10', '-0.05', '0.005'] as $return) {
+        $result->recordReturn(NumericValueAsString::of($return));
+    }
+
+    expect($result->sampleSize)->toBe(3)
+        ->and($result->sumOfReturns->toRawString())->toBe('0.05500000000000000000')
+        ->and($result->sumOfSquaredReturns->toRawString())->toBe('0.0125250000'.str_repeat('0', 30))
+        // Only the returns below the risk-free rate: (-0.06)² + (-0.005)².
+        ->and($result->sumOfSquaredShortfalls->toRawString())->toBe('0.00362500000000000000')
+        ->and(get_object_vars($result))->not->toHaveKey('returns');
 });
