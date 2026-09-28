@@ -105,3 +105,5 @@ Initial public release.
   `SequentialAnalyticsInterface` marker), a realized trade that closed before the one read ahead
   of it throws `UnorderedTradeSourceException`. Open trades and equal close times may come in
   any order, and a run without those calculators accepts any order.
+- The risk/reward ratio's `averageWin` / `averageLoss` follow the run's scale like every other
+  amount (they were fixed at 10 decimal places).

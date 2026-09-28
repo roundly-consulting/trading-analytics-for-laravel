@@ -368,7 +368,7 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
             Analytics\TradesDuration::class => fn () => $this->duration = new TradesDuration,
             Analytics\Streaks::class => fn () => $this->streaks = new Streaks,
             Analytics\Expectancy::class => fn () => $this->expectancy = new Expectancy($this->scale),
-            Analytics\RiskRewardRatio::class => fn () => $this->riskRewardRatio = new RiskRewardRatio,
+            Analytics\RiskRewardRatio::class => fn () => $this->riskRewardRatio = new RiskRewardRatio(amountScale: $this->scale),
             Analytics\WinRateByPeriod::class => fn () => $this->winRateByPeriod = new WinRateByPeriod($this->winRatePeriod),
             Analytics\MaxDrawdown::class => fn () => $this->maxDrawdown = new MaxDrawdown($this->scale),
             Analytics\RiskAdjustedReturns::class => fn () => $this->riskAdjustedReturns = new RiskAdjustedReturns,

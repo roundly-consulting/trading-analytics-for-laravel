@@ -370,3 +370,14 @@ it('lets open trades and equal close times come in any order', function (): void
     expect($analytics->maxDrawdown?->value->toRawString())->toBe('11.0000000000')
         ->and($analytics->streaks?->wins->global->total->toRawString())->toBe('2');
 });
+
+it('reports every amount at the run scale', function (): void {
+    $analytics = Analytics::for(handComputedTrades())->scale(4)->calculate();
+
+    expect($analytics->realizedProfitAndLoss?->gross->global->total->average->toRawString())->toBe('6.6666')
+        ->and($analytics->expectancy?->value->toRawString())->toBe('6.6666')
+        ->and($analytics->riskRewardRatio?->averageWin->toRawString())->toBe('15.0000')
+        ->and($analytics->riskRewardRatio?->averageLoss->toRawString())->toBe('10.0000')
+        ->and($analytics->maxDrawdown?->value->toRawString())->toBe('11.0000')
+        ->and($analytics->riskRewardRatio?->value->toRawString())->toBe('1.5000');
+});

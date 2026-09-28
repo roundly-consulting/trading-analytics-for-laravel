@@ -25,11 +25,15 @@ final class RiskRewardRatio implements Arrayable, Jsonable, JsonSerializable
 
     public NumericValueAsString $averageLoss;
 
-    public function __construct(int $scale = 4)
+    /**
+     * @param  int  $scale  decimal places of the ratio
+     * @param  int  $amountScale  decimal places of the average win / loss — the run's scale
+     */
+    public function __construct(int $scale = 4, int $amountScale = 10)
     {
         $this->value = new NumericValueAsString(scale: $scale);
-        $this->averageWin = new NumericValueAsString(scale: 10);
-        $this->averageLoss = new NumericValueAsString(scale: 10);
+        $this->averageWin = new NumericValueAsString(scale: $amountScale);
+        $this->averageLoss = new NumericValueAsString(scale: $amountScale);
     }
 
     /** @return array<string, string> */
