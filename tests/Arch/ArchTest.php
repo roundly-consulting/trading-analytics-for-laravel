@@ -96,3 +96,9 @@ arch('enums are final')
 arch('exceptions extend the package base exception')
     ->expect('RoundlyConsulting\TradingAnalytics\Exceptions')
     ->toExtend('RoundlyConsulting\TradingAnalytics\Exceptions\TradingAnalyticsException');
+
+/**
+ * Trading analytics has no actions, so this guards the shape rather than a live bypass: the
+ * engine traits under Traits/ must never grow a path around the manager.
+ */
+ArchPresets::modelsGoThroughTheFacade('RoundlyConsulting\TradingAnalytics');

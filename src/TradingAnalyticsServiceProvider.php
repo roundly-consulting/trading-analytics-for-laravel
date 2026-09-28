@@ -30,7 +30,7 @@ final class TradingAnalyticsServiceProvider extends PackageServiceProvider
     {
         parent::register();
 
-        $this->app->singleton('trading-analytics', fn (): AnalyticsFactory => new AnalyticsFactory);
+        $this->app->singleton(TradingAnalyticsManager::class);
     }
 
     /**

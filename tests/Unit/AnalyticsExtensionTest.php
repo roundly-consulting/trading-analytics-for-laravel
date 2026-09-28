@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Support\LazyCollection;
 use RoundlyConsulting\TradingAnalytics\Analytics;
-use RoundlyConsulting\TradingAnalytics\AnalyticsFactory;
 use RoundlyConsulting\TradingAnalytics\Enums\Period;
+use RoundlyConsulting\TradingAnalytics\Facades\TradingAnalytics;
 
 /**
  * A consumer subclass used to prove the documented "subclass to extend" story:
@@ -27,8 +27,15 @@ it('keeps the subclass through a fluent setter chain', function (LazyCollection 
     ))->toBeInstanceOf(CustomAnalytics::class);
 })->with('empty-trades');
 
-it('still returns analytics from the base factory', function (LazyCollection $trades) {
-    $factory = new AnalyticsFactory;
+it('builds the base engine through the manager by default', function (LazyCollection $trades) {
+    expect(TradingAnalytics::for($trades))->toBeInstanceOf(Analytics::class)
+        ->not->toBeInstanceOf(CustomAnalytics::class);
+})->with('empty-trades');
 
-    expect($factory->make($trades))->toBeInstanceOf(Analytics::class);
+it('builds a subclass engine through the manager once configured', function (LazyCollection $trades) {
+    TradingAnalytics::using(CustomAnalytics::class);
+
+    expect(TradingAnalytics::for($trades))->toBeInstanceOf(CustomAnalytics::class)
+        ->and(TradingAnalytics::calculate($trades))->toBeInstanceOf(CustomAnalytics::class)
+        ->and(TradingAnalytics::engine())->toBe(CustomAnalytics::class);
 })->with('empty-trades');

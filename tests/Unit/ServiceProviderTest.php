@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\ServiceProvider;
-use RoundlyConsulting\TradingAnalytics\AnalyticsFactory;
+use RoundlyConsulting\TradingAnalytics\TradingAnalyticsManager;
 use RoundlyConsulting\TradingAnalytics\TradingAnalyticsServiceProvider;
 
 it('merges the package config', function (): void {
@@ -11,9 +11,8 @@ it('merges the package config', function (): void {
         ->and(config('trading-analytics.win_rate_period'))->toBe('daily');
 });
 
-it('binds the analytics factory as a singleton', function (): void {
-    expect(app('trading-analytics'))->toBeInstanceOf(AnalyticsFactory::class)
-        ->and(app('trading-analytics'))->toBe(app('trading-analytics'));
+it('binds the manager as a singleton', function (): void {
+    expect(app(TradingAnalyticsManager::class))->toBe(app(TradingAnalyticsManager::class));
 });
 
 it('publishes the config under the trading-analytics-config tag', function (): void {

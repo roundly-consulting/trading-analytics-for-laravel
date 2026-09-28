@@ -205,9 +205,11 @@ it('runs the full pipeline and serializes without error', function (): void {
 
 it('produces identical results through the facade and the builder', function (): void {
     $direct = Analytics::make(loadTrades())->calculate();
-    $viaFacade = TradingAnalytics::make(loadTrades())->calculate();
+    $viaFacade = TradingAnalytics::for(loadTrades())->calculate();
+    $fromRows = TradingAnalytics::calculate(loadTrades()->map(static fn (Trade $trade): array => $trade->toArray()));
 
-    expect($viaFacade->toArray())->toEqual($direct->toArray());
+    expect($viaFacade->toArray())->toEqual($direct->toArray())
+        ->and($fromRows->toArray())->toEqual($direct->toArray());
 });
 
 it('matches the fixture counts and win rate', function (): void {
