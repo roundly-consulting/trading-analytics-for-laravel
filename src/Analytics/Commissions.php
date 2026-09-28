@@ -10,6 +10,10 @@ use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalAgg
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 
+/**
+ * Commission paid per trade. A trade without a commission paid none — the same reading the
+ * net P&L takes — so it counts as zero: the average is per trade and the lowest can be 0.
+ */
 class Commissions extends BaseNumericDirectionalAggregatesByCurrencyCalculator
 {
     protected static function dto(Analytics $analytics): NumericDirectionalAggregatesByCurrency
@@ -19,11 +23,6 @@ class Commissions extends BaseNumericDirectionalAggregatesByCurrencyCalculator
 
     protected static function value(Trade $trade): NumericValueAsString
     {
-        return $trade->commission;
-    }
-
-    protected static function shouldCalculatePerTrade(Analytics $analytics, Trade $trade): bool
-    {
-        return ! is_null($trade->commission);
+        return $trade->commission ?? new NumericValueAsString;
     }
 }

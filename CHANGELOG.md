@@ -71,3 +71,13 @@ Initial public release.
   A break-even trade now lands in neither.
 - The profit factor is realized gross profit over realized gross loss (it read the unrealized
   aggregates), and a loss-only pair or currency reads `0.00` instead of going missing.
+- Averages divide by the trades that fed them: realized P&L and trade duration over the closed
+  trades, unrealized P&L over the open ones (all three divided by every trade). Each
+  `NumericAggregates` now carries that `count`, so the aggregate calculators no longer depend on
+  `Counts`.
+- A zero is a value, not an "unset" marker: a break-even trade, a same-second trade or a trade
+  without a commission no longer resets the highest / lowest, the cumulative return can report a
+  highest below 0, a −100 % trade is no longer restarted by the next one, and a pair whose P&L
+  nets to exactly 0 still appears in `toArray()`.
+- A trade without a commission counts as a zero commission (as the net P&L already read it), so
+  it shows in the commission extremes and breakdowns as well as the per-trade average.

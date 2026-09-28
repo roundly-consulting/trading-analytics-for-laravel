@@ -375,7 +375,9 @@ it('correctly returns highest and lowest pairs', function (LazyCollection $trade
         ]);
 })->with('different-highest-and-lowest');
 
-it('correctly returns commissions for only closed trades', function (LazyCollection $trades) {
+// The open SHIB/USD trade carries no commission: it paid none, so it counts as a zero —
+// the per-trade average was already taken over it; now its 0 is the lowest as well.
+it('counts a trade without a commission as a zero commission', function (LazyCollection $trades) {
     $analytics = new Analytics($trades);
     $analytics->calculate();
 
@@ -390,8 +392,8 @@ it('correctly returns commissions for only closed trades', function (LazyCollect
                         'pair' => 'SHIB/EUR',
                     ],
                     'lowest' => [
-                        'value' => '8.0000000000',
-                        'pair' => 'SHIB/EUR',
+                        'value' => '0.0000000000',
+                        'pair' => 'SHIB/USD',
                     ],
                 ],
                 'buy' => [
@@ -402,8 +404,8 @@ it('correctly returns commissions for only closed trades', function (LazyCollect
                         'pair' => 'SHIB/EUR',
                     ],
                     'lowest' => [
-                        'value' => '8.5000000000',
-                        'pair' => 'SHIB/EUR',
+                        'value' => '0.0000000000',
+                        'pair' => 'SHIB/USD',
                     ],
                 ],
                 'sell' => [
@@ -420,6 +422,44 @@ it('correctly returns commissions for only closed trades', function (LazyCollect
                 ],
             ],
             'per_pair' => [
+                'SHIB/USD' => [
+                    'total' => [
+                        'total' => '0.0000000000',
+                        'average' => '0.0000000000',
+                        'highest' => [
+                            'value' => '0.0000000000',
+                            'pair' => 'SHIB/USD',
+                        ],
+                        'lowest' => [
+                            'value' => '0.0000000000',
+                            'pair' => 'SHIB/USD',
+                        ],
+                    ],
+                    'buy' => [
+                        'total' => '0.0000000000',
+                        'average' => '0.0000000000',
+                        'highest' => [
+                            'value' => '0.0000000000',
+                            'pair' => 'SHIB/USD',
+                        ],
+                        'lowest' => [
+                            'value' => '0.0000000000',
+                            'pair' => 'SHIB/USD',
+                        ],
+                    ],
+                    'sell' => [
+                        'total' => '0.0000000000',
+                        'average' => '0.0000000000',
+                        'highest' => [
+                            'value' => '0.0000000000',
+                            'pair' => '',
+                        ],
+                        'lowest' => [
+                            'value' => '0.0000000000',
+                            'pair' => '',
+                        ],
+                    ],
+                ],
                 'SHIB/EUR' => [
                     'total' => [
                         'total' => '16.5000000000',
@@ -469,8 +509,8 @@ it('correctly returns commissions for only closed trades', function (LazyCollect
                             'pair' => 'SHIB/EUR',
                         ],
                         'lowest' => [
-                            'value' => '8.0000000000',
-                            'pair' => 'SHIB/EUR',
+                            'value' => '0.0000000000',
+                            'pair' => 'SHIB/USD',
                         ],
                     ],
                     'buy' => [
@@ -481,8 +521,8 @@ it('correctly returns commissions for only closed trades', function (LazyCollect
                             'pair' => 'SHIB/EUR',
                         ],
                         'lowest' => [
-                            'value' => '8.5000000000',
-                            'pair' => 'SHIB/EUR',
+                            'value' => '0.0000000000',
+                            'pair' => 'SHIB/USD',
                         ],
                     ],
                     'sell' => [
@@ -500,6 +540,44 @@ it('correctly returns commissions for only closed trades', function (LazyCollect
                 ],
             ],
             'per_quote_currency' => [
+                'USD' => [
+                    'total' => [
+                        'total' => '0.0000000000',
+                        'average' => '0.0000000000',
+                        'highest' => [
+                            'value' => '0.0000000000',
+                            'pair' => 'SHIB/USD',
+                        ],
+                        'lowest' => [
+                            'value' => '0.0000000000',
+                            'pair' => 'SHIB/USD',
+                        ],
+                    ],
+                    'buy' => [
+                        'total' => '0.0000000000',
+                        'average' => '0.0000000000',
+                        'highest' => [
+                            'value' => '0.0000000000',
+                            'pair' => 'SHIB/USD',
+                        ],
+                        'lowest' => [
+                            'value' => '0.0000000000',
+                            'pair' => 'SHIB/USD',
+                        ],
+                    ],
+                    'sell' => [
+                        'total' => '0.0000000000',
+                        'average' => '0.0000000000',
+                        'highest' => [
+                            'value' => '0.0000000000',
+                            'pair' => '',
+                        ],
+                        'lowest' => [
+                            'value' => '0.0000000000',
+                            'pair' => '',
+                        ],
+                    ],
+                ],
                 'EUR' => [
                     'total' => [
                         'total' => '16.5000000000',

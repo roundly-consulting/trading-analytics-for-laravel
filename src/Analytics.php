@@ -114,25 +114,15 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
      * selecting one with {@see only()} also pulls its dependencies in — transitively —
      * and {@see except()} keeps a dependency a remaining calculator still needs.
      *
-     * Every calculator built on the directional-aggregates base divides its totals by the
-     * trade counts to get its averages, so each of them depends on {@see Analytics\Counts}.
+     * The aggregate calculators count the trades they average over themselves, so only the
+     * ratios built from another calculator's figures appear here.
      *
      * @var array<class-string<AnalyticsInterface>, list<class-string<AnalyticsInterface>>>
      */
     protected array $dependencies = [
-        Analytics\TradingVolume::class => [Analytics\Counts::class],
-        Analytics\TradingValue::class => [Analytics\Counts::class],
-        Analytics\Commissions::class => [Analytics\Counts::class],
-        Analytics\UnrealizedGrossProfitAndLoss::class => [Analytics\Counts::class],
-        Analytics\UnrealizedNetProfitAndLoss::class => [Analytics\Counts::class],
-        Analytics\RealizedGrossProfitAndLoss::class => [Analytics\Counts::class],
-        Analytics\RealizedNetProfitAndLoss::class => [Analytics\Counts::class],
-        Analytics\TradesDuration::class => [Analytics\Counts::class],
         Analytics\Wins::class => [Analytics\Counts::class],
         Analytics\TradingFrequency::class => [Analytics\Counts::class],
         Analytics\ProfitFactor::class => [Analytics\RealizedGrossProfitAndLoss::class],
-        Analytics\GrossCumulativeReturn::class => [Analytics\Counts::class],
-        Analytics\NetCumulativeReturn::class => [Analytics\Counts::class],
         Analytics\Expectancy::class => [Analytics\RealizedGrossProfitAndLoss::class],
         Analytics\RiskRewardRatio::class => [Analytics\RealizedGrossProfitAndLoss::class],
     ];

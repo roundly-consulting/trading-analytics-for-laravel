@@ -24,6 +24,11 @@ use RoundlyConsulting\TradingAnalytics\Tests\Support\TradeDatasets;
  * - `profit_and_loss`, `profit_factor`, `expectancy`, `risk_reward_ratio` — realized and
  *   unrealized profits/losses leaked into each other (every trade landed on both sides), and
  *   the profit factor read the unrealized side.
+ * - `profit_and_loss`, `duration`, `commission`, `cumulative_return` — averages divided by every
+ *   trade instead of the trades that fed them (realized over open + closed); a zero value
+ *   (break-even trade, same-second trade, no commission) was taken for "unset" and overwritten
+ *   as the highest / lowest; a cumulative return could never report a highest below 0; and a
+ *   trade without a commission was skipped by the commission extremes (it now counts as 0).
  *
  * @phpstan-type GoldenVector array{risk_adjusted_returns: array<string, string|int>, analytics_sha256: array<string, string>}
  */

@@ -70,3 +70,104 @@ it('reports a profit factor for a history of closed trades only', function (): v
 
     expect($analytics->profitFactor?->total->toRawString())->toBe('3.00');
 });
+
+it('averages each aggregate over the trades that fed it', function (): void {
+    $analytics = handComputed();
+    $realizedGross = $analytics->realizedProfitAndLoss?->gross;
+
+    // Realized: (10 − 10 + 20) / 3 closed trades, not / 4 trades.
+    expect($realizedGross?->global->total->average->toRawString())->toBe('6.6666666666')
+        ->and($realizedGross?->global->total->count)->toBe(3)
+        ->and($realizedGross?->global->buy->average->toRawString())->toBe('15.0000000000')
+        ->and($realizedGross?->global->sell->average->toRawString())->toBe('-10.0000000000')
+        ->and($realizedGross?->forPair('ETH/USD')->total->average->toRawString())->toBe('20.0000000000')
+        ->and($analytics->realizedProfitAndLoss?->net->global->total->average->toRawString())->toBe('6.0000000000')
+        // Unrealized: the one open trade.
+        ->and($analytics->unrealizedProfitAndLoss?->gross->global->total->average->toRawString())->toBe('-10.0000000000')
+        ->and($analytics->unrealizedProfitAndLoss?->gross->forPair('ETH/USD')->total->average->toRawString())->toBe('-10.0000000000')
+        // Duration: (7200 + 3600 + 14400) s over the 3 closed trades.
+        ->and($analytics->duration?->global->total->average->toRawString())->toBe('8400.00')
+        ->and($analytics->duration?->global->total->highest->toRawString())->toBe('14400.00')
+        ->and($analytics->duration?->global->total->lowest->toRawString())->toBe('3600.00')
+        // Every trade has a size and a value.
+        ->and($analytics->volume?->global->total->average->toRawString())->toBe('1.2500000000')
+        ->and($analytics->value?->global->total->average->toRawString())->toBe('112.5000000000');
+});
+
+it('treats a trade without a commission as a zero commission', function (): void {
+    $commission = handComputed()->commission?->global->total;
+
+    // 1 + 1 + 0 + none over 4 trades.
+    expect($commission?->total->toRawString())->toBe('2.0000000000')
+        ->and($commission?->average->toRawString())->toBe('0.5000000000')
+        ->and($commission?->highest->toRawString())->toBe('1.0000000000')
+        ->and($commission?->lowest->toRawString())->toBe('0.0000000000')
+        ->and($commission?->count)->toBe(4);
+});
+
+it('serializes a pair whose realized p&l nets to zero', function (): void {
+    // BTC/USD realized +10 and −10: a real, flat pair, not an empty one.
+    $perPair = handComputed()->toArray()['profit_and_loss']['realized']['gross']['pnl']['per_pair'];
+
+    expect($perPair)->toHaveKeys(['BTC/USD', 'ETH/USD'])
+        ->and($perPair['BTC/USD']['total']['total'])->toBe('0.0000000000')
+        ->and($perPair['BTC/USD']['total']['average'])->toBe('0.0000000000');
+});
+
+it('keeps a break-even trade as a real highest or lowest value', function (array $pnls, string $highest, string $lowest): void {
+    $trades = LazyCollection::make(array_map(
+        static fn (int $pnl, int $day): Trade => Trade::make('BTC', 'USD', '100', (string) (100 + $pnl), '1', 'buy', "2024-01-0{$day} 10:00:00", null, "2024-01-0{$day} 11:00:00"),
+        $pnls,
+        range(1, count($pnls)),
+    ));
+
+    $total = Analytics::for($trades)->calculate()->realizedProfitAndLoss?->gross->global->total;
+
+    expect($total?->highest->toRawString())->toBe($highest)
+        ->and($total?->lowest->toRawString())->toBe($lowest);
+})->with([
+    'break-even then a loss' => [[0, -50], '0.0000000000', '-50.0000000000'],
+    'a break-even between two wins' => [[10, 0, 5], '10.0000000000', '0.0000000000'],
+    'losses only' => [[-5, -20], '-5.0000000000', '-20.0000000000'],
+]);
+
+it('compounds the cumulative return and tracks its running extremes', function (): void {
+    // Growth factors 1.1 · 0.95 · 1.2 · 0.8 (the open trade at its close price): running
+    // returns +10 %, +4.5 %, +25.4 %, +0.32 %; geometric mean 1.0032^(1/4) − 1 = 0.08 %.
+    $gross = handComputed()->cumulativeReturn?->gross->global->total;
+
+    expect($gross?->total->toRawString())->toBe('0.32')
+        ->and($gross?->average->toRawString())->toBe('0.08')
+        ->and($gross?->highest->toRawString())->toBe('25.40')
+        ->and($gross?->lowest->toRawString())->toBe('0.32')
+        ->and($gross?->count)->toBe(4);
+});
+
+it('tracks a cumulative return that never rises above zero', function (): void {
+    // −10 % then −10 %: running −10 % and −19 %, so the highest is −10 %, not an untouched 0.
+    $trades = LazyCollection::make([
+        Trade::make('BTC', 'USD', '100', '90', '1', 'buy', '2024-01-01 10:00:00', null, '2024-01-01 11:00:00'),
+        Trade::make('BTC', 'USD', '100', '90', '1', 'buy', '2024-01-02 10:00:00', null, '2024-01-02 11:00:00'),
+    ]);
+
+    $gross = Analytics::for($trades)->calculate()->cumulativeReturn?->gross->global->total;
+
+    expect($gross?->total->toRawString())->toBe('-19.00')
+        ->and($gross?->highest->toRawString())->toBe('-10.00')
+        ->and($gross?->lowest->toRawString())->toBe('-19.00');
+});
+
+it('keeps a total loss in the cumulative return instead of restarting it', function (): void {
+    // −100 % leaves nothing to compound: a later +50 % is still −100 % overall.
+    $trades = LazyCollection::make([
+        Trade::make('BTC', 'USD', '100', '0', '1', 'buy', '2024-01-01 10:00:00', null, '2024-01-01 11:00:00'),
+        Trade::make('BTC', 'USD', '100', '150', '1', 'buy', '2024-01-02 10:00:00', null, '2024-01-02 11:00:00'),
+    ]);
+
+    $gross = Analytics::for($trades)->calculate()->cumulativeReturn?->gross->global->total;
+
+    expect($gross?->total->toRawString())->toBe('-100.00')
+        ->and($gross?->average->toRawString())->toBe('-100.00')
+        ->and($gross?->highest->toRawString())->toBe('-100.00')
+        ->and($gross?->lowest->toRawString())->toBe('-100.00');
+});

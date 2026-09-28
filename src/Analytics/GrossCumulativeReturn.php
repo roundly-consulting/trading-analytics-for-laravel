@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace RoundlyConsulting\TradingAnalytics\Analytics;
 
 use RoundlyConsulting\TradingAnalytics\Analytics;
-use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericByDirections;
+use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericAggregates;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalAggregates;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalAggregatesByCurrency;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
@@ -13,30 +13,34 @@ use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
 use RoundlyConsulting\TradingAnalytics\Support\BcMath;
 
+/**
+ * Cumulative return of compounding every trade's return (open trades at their close price),
+ * in percent, with the geometric mean per trade as the average and the highest / lowest
+ * running cumulative return along the way.
+ *
+ * During the pass an aggregate's `total` and `average` both carry the running product of the
+ * growth factors (1 + return); the after-trades hook turns them into the cumulative return
+ * and its geometric mean.
+ */
 class GrossCumulativeReturn implements AnalyticsInterface
 {
     public static function calculatePerTrade(Analytics $analytics, Trade $trade): void
     {
-        static::calculatePerTradeCumulativeReturns($trade, static::dto($analytics)->global);
-        static::calculatePerTradeCumulativeReturns($trade, static::dto($analytics)->forPair($trade->pair()));
-        static::calculatePerTradeCumulativeReturns($trade, static::dto($analytics)->forBaseCurrency($trade->baseCurrency));
-        static::calculatePerTradeCumulativeReturns($trade, static::dto($analytics)->forQuoteCurrency($trade->quoteCurrency));
+        $dto = static::dto($analytics);
+        $factor = static::getReturnFromTrade($trade)->add(value: 1, immutable: true);
+
+        foreach ([$dto->global, $dto->forPair($trade->pair()), $dto->forBaseCurrency($trade->baseCurrency), $dto->forQuoteCurrency($trade->quoteCurrency)] as $aggregates) {
+            static::compound($aggregates->total, $factor, $trade->pair());
+            static::compound($trade->direction->isBuy() ? $aggregates->buy : $aggregates->sell, $factor, $trade->pair());
+        }
     }
 
     public static function calculateAfterTrades(Analytics $analytics): void
     {
-        self::calculateAfterTradesCumulativeReturns(static::dto($analytics)->global, $analytics->counts->global);
+        $dto = static::dto($analytics);
 
-        foreach (static::dto($analytics)->perPair as $pair => $dto) {
-            self::calculateAfterTradesCumulativeReturns($dto, $analytics->counts->forPair($pair));
-        }
-
-        foreach (static::dto($analytics)->perBaseCurrency as $baseCurrency => $dto) {
-            self::calculateAfterTradesCumulativeReturns($dto, $analytics->counts->forBaseCurrency($baseCurrency));
-        }
-
-        foreach (static::dto($analytics)->perQuoteCurrency as $quoteCurrency => $dto) {
-            self::calculateAfterTradesCumulativeReturns($dto, $analytics->counts->forQuoteCurrency($quoteCurrency));
+        foreach ([$dto->global, ...array_values($dto->perPair), ...array_values($dto->perBaseCurrency), ...array_values($dto->perQuoteCurrency)] as $aggregates) {
+            static::calculateAfterTradesCumulativeReturns($aggregates);
         }
     }
 
@@ -50,149 +54,59 @@ class GrossCumulativeReturn implements AnalyticsInterface
         return $trade->roi(asPercentage: false);
     }
 
-    protected static function calculatePerTradeCumulativeReturns(Trade $trade, NumericDirectionalAggregates $dto): void
+    /**
+     * Multiply one growth factor into the running products. The first trade starts them at 1
+     * — decided by the trade count, not by a zero product, which is a real result (a −100 %
+     * trade) that later trades must not reset.
+     */
+    protected static function compound(NumericAggregates $aggregate, NumericValueAsString $factor, string $pair): void
     {
-        static::initializeBeforeCalculations($dto->total->total);
-        static::initializeBeforeCalculations($dto->total->average);
-
-        $adjustedTradeReturn = static::getReturnFromTrade($trade)->add(
-            value: 1,
-            immutable: true
-        );
-
-        $dto->total->average->multiply($adjustedTradeReturn);
-
-        $dto->total->total->multiply(
-            value: $adjustedTradeReturn,
-        );
-
-        $return = static::calculateFinalCumulativeReturn($dto->total->total);
-
-        if ($return->isGreaterThan($dto->total->highest)) {
-            $dto->total->highest->set(value: $return, scale: 2);
-            $dto->total->highestPair = $trade->pair();
+        if ($aggregate->count === 0) {
+            $aggregate->total->set(1);
+            $aggregate->average->set(1);
+            $aggregate->highest->set(0, scale: 2);
+            $aggregate->lowest->set(0, scale: 2);
         }
 
-        if ($return->isLessThan($dto->total->lowest) || $dto->total->lowest->isZero()) {
-            $dto->total->lowest->set(value: $return, scale: 2);
-            $dto->total->lowestPair = $trade->pair();
-        }
+        $aggregate->count++;
+        $aggregate->total->multiply($factor);
+        $aggregate->average->multiply($factor);
 
-        if ($trade->direction->isBuy()) {
-            static::initializeBeforeCalculations($dto->buy->total);
-            static::initializeBeforeCalculations($dto->buy->average);
+        $aggregate->trackExtremes(static::percentage($aggregate->total), $pair);
+    }
 
-            $dto->buy->average->multiply($adjustedTradeReturn);
+    protected static function calculateAfterTradesCumulativeReturns(NumericDirectionalAggregates $dto): void
+    {
+        foreach ([$dto->total, $dto->buy, $dto->sell] as $aggregate) {
+            $cumulativeReturn = $aggregate->count > 0 ? static::percentage($aggregate->total) : new NumericValueAsString(scale: 2);
 
-            $dto->buy->total->multiply(
-                value: $adjustedTradeReturn,
-            );
-
-            $return = static::calculateFinalCumulativeReturn($dto->buy->total);
-
-            if ($return->isGreaterThan($dto->buy->highest)) {
-                $dto->buy->highest->set(value: $return, scale: 2);
-                $dto->buy->highestPair = $trade->pair();
-            }
-
-            if ($return->isLessThan($dto->buy->lowest) || $dto->buy->lowest->isZero()) {
-                $dto->buy->lowest->set(value: $return, scale: 2);
-                $dto->buy->lowestPair = $trade->pair();
-            }
-        } else {
-            static::initializeBeforeCalculations($dto->sell->total);
-            static::initializeBeforeCalculations($dto->sell->average);
-
-            $dto->sell->average->multiply($adjustedTradeReturn);
-
-            $dto->sell->total->multiply(
-                value: $adjustedTradeReturn,
-            );
-
-            $return = static::calculateFinalCumulativeReturn($dto->sell->total);
-
-            if ($return->isGreaterThan($dto->sell->highest)) {
-                $dto->sell->highest->set(value: $return, scale: 2);
-                $dto->sell->highestPair = $trade->pair();
-            }
-
-            if ($return->isLessThan($dto->sell->lowest) || $dto->sell->lowest->isZero()) {
-                $dto->sell->lowest->set(value: $return, scale: 2);
-                $dto->sell->lowestPair = $trade->pair();
-            }
+            $aggregate->total->set(value: $cumulativeReturn, scale: 2);
+            $aggregate->average->set(value: static::calculateAverageCumulativeReturn($aggregate), scale: 2);
         }
     }
 
-    protected static function calculateAfterTradesCumulativeReturns(NumericDirectionalAggregates $dto, NumericByDirections $counts): void
+    /** A running product of growth factors as a percentage return, to 2 decimals. */
+    protected static function percentage(NumericValueAsString $product): NumericValueAsString
     {
-        $dto->total->total->set(
-            value: static::calculateFinalCumulativeReturn($dto->total->total),
-            scale: 2,
-        );
-
-        $dto->buy->total->set(
-            value: static::calculateFinalCumulativeReturn($dto->buy->total),
-            scale: 2,
-        );
-
-        $dto->sell->total->set(
-            value: static::calculateFinalCumulativeReturn($dto->sell->total),
-            scale: 2,
-        );
-
-        $averageCumulativeReturn = static::calculateAverageCumulativeReturn(
-            return: $dto->total->average,
-            count: $counts->total
-        );
-
-        $dto->total->average->set(value: $averageCumulativeReturn, scale: 2);
-
-        $averageCumulativeReturn = static::calculateAverageCumulativeReturn(
-            return: $dto->buy->average,
-            count: $counts->buy
-        );
-
-        $dto->buy->average->set(value: $averageCumulativeReturn, scale: 2);
-
-        $averageCumulativeReturn = static::calculateAverageCumulativeReturn(
-            return: $dto->sell->average,
-            count: $counts->sell
-        );
-
-        $dto->sell->average->set(value: $averageCumulativeReturn, scale: 2);
+        return $product->subtract(value: 1, immutable: true)
+            ->multiply(100)
+            ->round(2);
     }
 
-    protected static function initializeBeforeCalculations(NumericValueAsString $value): void
+    protected static function calculateAverageCumulativeReturn(NumericAggregates $aggregate): NumericValueAsString
     {
-        if ($value->isZero()) {
-            $value->set(1);
-        }
-    }
-
-    protected static function calculateFinalCumulativeReturn(NumericValueAsString $value): NumericValueAsString
-    {
-        if ($value->wasChanged()) {
-            return $value->subtract(value: 1, immutable: true)
-                ->multiply(100)
-                ->round(2);
-        }
-
-        return new NumericValueAsString(scale: 2);
-    }
-
-    protected static function calculateAverageCumulativeReturn(NumericValueAsString $return, NumericValueAsString $count): NumericValueAsString
-    {
-        if ($count->isZero()) {
+        if ($aggregate->count === 0) {
             return new NumericValueAsString(scale: 2);
         }
 
-        $isNegative = $return->isLessThan(0);
+        $product = $aggregate->average;
+        $isNegative = $product->isLessThan(0);
 
         // Geometric mean of the accumulated growth factors, computed entirely in
         // bcmath so the package's arbitrary-precision guarantee is not broken.
         $root = BcMath::nthRoot(
-            value: $return->abs(immutable: true)->toRawString(),
-            n: $count->toInt(),
+            value: $product->abs(immutable: true)->toRawString(),
+            n: $aggregate->count,
         );
 
         $geometricMean = new NumericValueAsString(value: $root, scale: 20);

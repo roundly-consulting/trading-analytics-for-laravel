@@ -3,19 +3,28 @@
 declare(strict_types=1);
 
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalAggregatesByCurrency;
+use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
 
-it('omits pairs whose total is zero from the array', function () {
+it('omits keys no trade fed from the array', function () {
     $dto = new NumericDirectionalAggregatesByCurrency(scale: 2);
 
-    // Touching forPair() materialises an all-zero aggregate for the pair.
+    // Touching forPair() materialises an empty aggregate for the pair.
     $dto->forPair('BTC/USD');
 
-    // A second pair with a non-zero total should be the only one serialised.
-    $dto->forPair('ETH/USD')->total->total->add(5);
+    $dto->forPair('ETH/USD')->total->record(NumericValueAsString::of(5), 'ETH/USD');
 
-    $array = $dto->toArray();
-
-    expect($array['per_pair'])
+    expect($dto->toArray()['per_pair'])
         ->toHaveKey('ETH/USD')
         ->not->toHaveKey('BTC/USD');
+});
+
+it('keeps a key whose recorded values net to zero', function () {
+    $dto = new NumericDirectionalAggregatesByCurrency(scale: 2);
+
+    $dto->forPair('BTC/USD')->total->record(NumericValueAsString::of(10), 'BTC/USD');
+    $dto->forPair('BTC/USD')->total->record(NumericValueAsString::of(-10), 'BTC/USD');
+
+    expect($dto->toArray()['per_pair'])->toHaveKey('BTC/USD')
+        ->and($dto->forPair('BTC/USD')->total->count)->toBe(2)
+        ->and($dto->forPair('BTC/USD')->total->total->toRawString())->toBe('0.00');
 });

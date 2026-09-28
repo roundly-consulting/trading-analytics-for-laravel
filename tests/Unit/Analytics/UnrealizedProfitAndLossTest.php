@@ -18,7 +18,7 @@ it('correctly returns unrealized profits and losses', function (LazyCollection $
                     'global' => [
                         'total' => [
                             'total' => '0.1650000000',
-                            'average' => '0.0550000000',
+                            'average' => '0.1650000000',
                             'highest' => [
                                 'value' => '0.1650000000',
                                 'pair' => 'SHIB/USD',
@@ -30,7 +30,7 @@ it('correctly returns unrealized profits and losses', function (LazyCollection $
                         ],
                         'buy' => [
                             'total' => '0.1650000000',
-                            'average' => '0.0825000000',
+                            'average' => '0.1650000000',
                             'highest' => [
                                 'value' => '0.1650000000',
                                 'pair' => 'SHIB/USD',
@@ -97,7 +97,7 @@ it('correctly returns unrealized profits and losses', function (LazyCollection $
                         'SHIB' => [
                             'total' => [
                                 'total' => '0.1650000000',
-                                'average' => '0.0550000000',
+                                'average' => '0.1650000000',
                                 'highest' => [
                                     'value' => '0.1650000000',
                                     'pair' => 'SHIB/USD',
@@ -109,7 +109,7 @@ it('correctly returns unrealized profits and losses', function (LazyCollection $
                             ],
                             'buy' => [
                                 'total' => '0.1650000000',
-                                'average' => '0.0825000000',
+                                'average' => '0.1650000000',
                                 'highest' => [
                                     'value' => '0.1650000000',
                                     'pair' => 'SHIB/USD',
@@ -199,7 +199,7 @@ it('correctly returns unrealized profits and losses', function (LazyCollection $
                     'global' => [
                         'total' => [
                             'total' => '0.1650000000',
-                            'average' => '0.0550000000',
+                            'average' => '0.1650000000',
                             'highest' => [
                                 'value' => '0.1650000000',
                                 'pair' => 'SHIB/USD',
@@ -211,7 +211,7 @@ it('correctly returns unrealized profits and losses', function (LazyCollection $
                         ],
                         'buy' => [
                             'total' => '0.1650000000',
-                            'average' => '0.0825000000',
+                            'average' => '0.1650000000',
                             'highest' => [
                                 'value' => '0.1650000000',
                                 'pair' => 'SHIB/USD',
@@ -278,7 +278,7 @@ it('correctly returns unrealized profits and losses', function (LazyCollection $
                         'SHIB' => [
                             'total' => [
                                 'total' => '0.1650000000',
-                                'average' => '0.0550000000',
+                                'average' => '0.1650000000',
                                 'highest' => [
                                     'value' => '0.1650000000',
                                     'pair' => 'SHIB/USD',
@@ -290,7 +290,7 @@ it('correctly returns unrealized profits and losses', function (LazyCollection $
                             ],
                             'buy' => [
                                 'total' => '0.1650000000',
-                                'average' => '0.0825000000',
+                                'average' => '0.1650000000',
                                 'highest' => [
                                     'value' => '0.1650000000',
                                     'pair' => 'SHIB/USD',

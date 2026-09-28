@@ -123,18 +123,26 @@ it('drops an excluded calculator nothing else needs', function (): void {
 });
 
 it('keeps an excluded calculator that a remaining one depends on', function (): void {
-    // Wins, the aggregates and the cumulative returns all divide by the counts.
-    $analytics = Analytics::for(TradeDatasets::golden('mixed-signs'))->except([Counts::class])->calculate();
+    // The profit factor, expectancy and risk/reward ratio are built from the realized gross P&L.
+    $analytics = Analytics::for(TradeDatasets::golden('mixed-signs'))->except([RealizedGrossProfitAndLoss::class])->calculate();
 
-    expect($analytics->counts?->toArray())->toBe(fullRun()['counts']);
+    expect($analytics->realizedProfitAndLoss?->toArray()['gross'])->toBe(fullRun()['profit_and_loss']['realized']['gross']);
 });
 
-it('pulls dependencies in transitively', function (): void {
-    // ProfitFactor needs the realized gross P&L, which in turn divides by the counts.
+it('drops a calculator the others no longer need', function (): void {
+    // The aggregates count their own trades, so nothing but Wins and TradingFrequency needs Counts.
+    $analytics = Analytics::for(TradeDatasets::golden('mixed-signs'))->except([Counts::class, Wins::class, TradingFrequency::class])->calculate();
+
+    expect($analytics->counts)->toBeNull()
+        ->and($analytics->realizedProfitAndLoss?->toArray())->toBe(fullRun()['profit_and_loss']['realized']);
+});
+
+it('pulls dependencies in', function (): void {
+    // ProfitFactor needs the realized gross P&L, which needs nothing else.
     $analytics = TradingAnalytics::calculate(TradeDatasets::golden('mixed-signs'), only: [ProfitFactor::class]);
 
-    expect($analytics->counts)->not->toBeNull()
-        ->and($analytics->realizedProfitAndLoss)->not->toBeNull()
+    expect($analytics->realizedProfitAndLoss)->not->toBeNull()
+        ->and($analytics->counts)->toBeNull()
         ->and($analytics->unrealizedProfitAndLoss)->toBeNull()
         ->and($analytics->streaks)->toBeNull();
 });

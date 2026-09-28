@@ -50,9 +50,9 @@ class NumericDirectionalAggregatesByCurrency implements Arrayable, Jsonable, Jso
     {
         return [
             'global' => $this->global->toArray(),
-            'per_pair' => $this->nonZeroNumericAnalyticsByDirectionsToArray($this->perPair),
-            'per_base_currency' => $this->nonZeroNumericAnalyticsByDirectionsToArray($this->perBaseCurrency),
-            'per_quote_currency' => $this->nonZeroNumericAnalyticsByDirectionsToArray($this->perQuoteCurrency),
+            'per_pair' => $this->recordedAggregatesToArray($this->perPair),
+            'per_base_currency' => $this->recordedAggregatesToArray($this->perBaseCurrency),
+            'per_quote_currency' => $this->recordedAggregatesToArray($this->perQuoteCurrency),
         ];
     }
 
@@ -60,13 +60,14 @@ class NumericDirectionalAggregatesByCurrency implements Arrayable, Jsonable, Jso
      * @param  array<string, NumericDirectionalAggregates>  $items
      * @return array<string, array<string, mixed>>
      */
-    protected function nonZeroNumericAnalyticsByDirectionsToArray(array $items): array
+    protected function recordedAggregatesToArray(array $items): array
     {
         $result = [];
 
         /** @var NumericDirectionalAggregates $analytics */
         foreach ($items as $key => $analytics) {
-            if ($analytics->total->total->isZero()) {
+            // A key no trade fed (touched through forPair() and friends) is empty, not zero.
+            if ($analytics->total->count === 0) {
                 continue;
             }
 

@@ -16,6 +16,9 @@ final class NumericAggregates implements Arrayable, Jsonable, JsonSerializable
 
     public NumericValueAsString $total;
 
+    /** How many trades fed this aggregate — the divisor of {@see $average}. */
+    public int $count = 0;
+
     public NumericValueAsString $average;
 
     public NumericValueAsString $highest;
@@ -32,6 +35,39 @@ final class NumericAggregates implements Arrayable, Jsonable, JsonSerializable
         $this->average = new NumericValueAsString(scale: $scale);
         $this->highest = new NumericValueAsString(scale: $scale);
         $this->lowest = new NumericValueAsString(scale: $scale);
+    }
+
+    /** Whether {@see $highest} / {@see $lowest} hold an observed value yet. */
+    private bool $hasExtremes = false;
+
+    /**
+     * Fold one trade's value in: it counts towards the average, adds to the total and may
+     * become the highest or lowest.
+     */
+    public function record(NumericValueAsString $value, string $pair): void
+    {
+        $this->count++;
+        $this->total->add($value);
+        $this->trackExtremes($value, $pair);
+    }
+
+    /**
+     * Keep the highest and lowest values seen. The first value sets both, so zero is a value
+     * like any other rather than an "unset" marker (a break-even trade used to reset them).
+     */
+    public function trackExtremes(NumericValueAsString $value, string $pair): void
+    {
+        if (! $this->hasExtremes || $value->isGreaterThan($this->highest)) {
+            $this->highest->set($value);
+            $this->highestPair = $pair;
+        }
+
+        if (! $this->hasExtremes || $value->isLessThan($this->lowest)) {
+            $this->lowest->set($value);
+            $this->lowestPair = $pair;
+        }
+
+        $this->hasExtremes = true;
     }
 
     /** @return array<string, mixed> */
