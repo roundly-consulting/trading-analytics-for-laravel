@@ -35,6 +35,9 @@ use RoundlyConsulting\TradingAnalytics\Tests\Support\TradeDatasets;
  *   expectancy was built from 4-decimal win / loss rates instead of the realized totals.
  * - `streaks` — BTC as the base of BTC/USD and BTC as the quote of ETH/BTC shared one running
  *   streak (only the BTC breakdowns moved).
+ * - `max_drawdown`, `risk_adjusted_returns` (and the verbatim Sharpe / Sortino) — the drawdown
+ *   percentage and both ratios divided operands truncated to 4 decimals (e.g. tiny's Sortino
+ *   0.0175 / 0.0459 = 0.3812 instead of 0.0175 / 0.04596… = 0.3807).
  *
  * @phpstan-type GoldenVector array{risk_adjusted_returns: array<string, string|int>, analytics_sha256: array<string, string>}
  */

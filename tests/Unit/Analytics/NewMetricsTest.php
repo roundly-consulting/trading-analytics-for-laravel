@@ -85,8 +85,9 @@ it('computes the win rate bucketed by period', function () {
 it('computes sharpe and sortino on the multi-pass path', function () {
     $analytics = Analytics::make(mixedWinLossTrades())->calculate();
 
+    // Sharpe 0.2666… / 0.6128… = 0.43514… (it read 0.4350 off inputs truncated to 4 decimals).
     expect($analytics->riskAdjustedReturns->toArray())->toBe([
-        'sharpe_ratio' => '0.4350',
+        'sharpe_ratio' => '0.4351',
         'sortino_ratio' => '0.9237',
         'mean_return' => '0.2666666666',
         'standard_deviation' => '0.6128258770',

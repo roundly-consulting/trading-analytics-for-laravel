@@ -55,16 +55,14 @@ class RiskAdjustedReturns implements MultiPassAnalyticsInterface
         $downsideDeviation = static::downsideDeviation($result, $count);
         $result->downsideDeviation->set($downsideDeviation);
 
+        // Divide at the work scale and truncate only the result: a deviation below 0.0001
+        // truncated to 4 decimals first was zero (a crash past the non-zero guard) or skewed.
         if ($standardDeviation->isPositiveNonZero()) {
-            $result->sharpeRatio->set(
-                $excess->cloneWithScale(4)->divide(value: $standardDeviation->cloneWithScale(4), immutable: true),
-            );
+            $result->sharpeRatio->set($excess->divide(value: $standardDeviation, immutable: true));
         }
 
         if ($downsideDeviation->isPositiveNonZero()) {
-            $result->sortinoRatio->set(
-                $excess->cloneWithScale(4)->divide(value: $downsideDeviation->cloneWithScale(4), immutable: true),
-            );
+            $result->sortinoRatio->set($excess->divide(value: $downsideDeviation, immutable: true));
         }
     }
 

@@ -2,7 +2,7 @@
     "tiny": {
         "risk_adjusted_returns": {
             "sharpe_ratio": "0.2121",
-            "sortino_ratio": "0.3812",
+            "sortino_ratio": "0.3807",
             "mean_return": "0.0175000000",
             "standard_deviation": "0.0825000000",
             "downside_deviation": "0.0459619407",
@@ -25,7 +25,7 @@
             "risk_reward_ratio": "5c44dcd6e8467ad825b32bcebdcde8eafafbbe1f51f5c9f6460e35152b52f8c2",
             "win_rate_by_period": "ba38e9719de7f43715744921dc49811053e66325fc42468e54cfc2931e92e092",
             "max_drawdown": "8c4493a2e713d3935369a79667bbd68ebadbfa013c58e91e3ae00931d65cdc99",
-            "risk_adjusted_returns": "f3012788c6fceded8a2e97e0f7e815ffe3ec55d6da6e179ea873cd49b7b505e1"
+            "risk_adjusted_returns": "a206fcee3b83b4b01592384cd5958036f2ea7f1d52e2594cc3d6d06c311ff29a"
         }
     },
     "single-trade": {
@@ -59,7 +59,7 @@
     },
     "all-winners": {
         "risk_adjusted_returns": {
-            "sharpe_ratio": "1.5017",
+            "sharpe_ratio": "1.4997",
             "sortino_ratio": "0.0000",
             "mean_return": "0.0422222683",
             "standard_deviation": "0.0281529462",
@@ -83,13 +83,13 @@
             "risk_reward_ratio": "f8a3448a42387257ec0fc1e263b0f8e576b9051696409f7166a9e5a0e91aebc9",
             "win_rate_by_period": "394a5551c9d482e414b65e2a413fe68134303ad553aa724cbdb64cad0eb6b75a",
             "max_drawdown": "83ffcc065575fe54a8fee7af168f152cd38bc2ea5e6d2dced2b5f53b8d7e5b0d",
-            "risk_adjusted_returns": "cc3b3899bd81360d20d028d0bc75361fbbde4785556979df6c66f2034571a876"
+            "risk_adjusted_returns": "b4f246bd9d5969cebcde1ea9f102e8cac1cd72a1633e73d6dc8b4f7d916213ae"
         }
     },
     "mixed-signs": {
         "risk_adjusted_returns": {
-            "sharpe_ratio": "0.0254",
-            "sortino_ratio": "0.0356",
+            "sharpe_ratio": "0.0257",
+            "sortino_ratio": "0.0360",
             "mean_return": "0.0031305331",
             "standard_deviation": "0.1216504864",
             "downside_deviation": "0.0869030486",
@@ -111,8 +111,8 @@
             "expectancy": "cb7b21f6ac71e76a761cbb77b8f86d3f3fd0cde2ed9b38d815d7a463ccc84134",
             "risk_reward_ratio": "5d0a7e95b3e7d2ca7c3cb3e01ce810b032f19740ea214eb2e3b9aea2834cea72",
             "win_rate_by_period": "1d2006a5b0b859c02616e21289319ec63d89862c963c196ed68496db71bd0a0d",
-            "max_drawdown": "cff75e065bc9f8cc412e6d233a22918070ea4c6cfae41a23d50b4c671ea401ba",
-            "risk_adjusted_returns": "14bf07dea7552bac73628d619a3b3fd0f05e466e3b7031a5d6f7e7e7c997892d"
+            "max_drawdown": "1e0022c136abb12dee18aff6ae0ea5c30b4e6fd6ce9228a52bab649236c92e82",
+            "risk_adjusted_returns": "e53976b69eb1a20d2563ad546c9aab1c73bee452af12397e5711c24141e4c428"
         }
     },
     "zero-variance-gain": {
@@ -205,7 +205,7 @@
     "random-2500": {
         "risk_adjusted_returns": {
             "sharpe_ratio": "-0.0453",
-            "sortino_ratio": "-0.0598",
+            "sortino_ratio": "-0.0599",
             "mean_return": "-0.0027033769",
             "standard_deviation": "0.0596711236",
             "downside_deviation": "0.0451000223",
@@ -227,14 +227,14 @@
             "expectancy": "5af9ded2f59ca8f6d9140bcbd9d6165c00629a7067aafaa35ed586937491a07f",
             "risk_reward_ratio": "00c28945cd07987680e64527404b4c1f6b9ca23933f5e1b5aae0a59bc025b224",
             "win_rate_by_period": "04a4c3a8c7861dd1030aad055dd11a71db13410b34ecd630ce53509c0f41d1d1",
-            "max_drawdown": "c20a8b8156a1e9877475006cb781f3df894456fa0c87f14cbcb742ac02038382",
-            "risk_adjusted_returns": "8001770c4e79f69377c0fa6739fee0ddb08c2b548d4efa1302910567db04a751"
+            "max_drawdown": "7a93bf4216608d22c985eaa85bf33781b51f4a59a7d118a5d77039f60c244a20",
+            "risk_adjusted_returns": "2cc7163353145012205db35f9009fbd183eda42090ddfabe9d9f7e3283143d84"
         }
     },
     "mixed-signs@risk-free-rate": {
         "risk_adjusted_returns": {
-            "sharpe_ratio": "0.0213",
-            "sortino_ratio": "0.0298",
+            "sharpe_ratio": "0.0216",
+            "sortino_ratio": "0.0301",
             "mean_return": "0.0031305331",
             "standard_deviation": "0.1216504864",
             "downside_deviation": "0.0871280255",
@@ -256,8 +256,8 @@
             "expectancy": "cb7b21f6ac71e76a761cbb77b8f86d3f3fd0cde2ed9b38d815d7a463ccc84134",
             "risk_reward_ratio": "5d0a7e95b3e7d2ca7c3cb3e01ce810b032f19740ea214eb2e3b9aea2834cea72",
             "win_rate_by_period": "1d2006a5b0b859c02616e21289319ec63d89862c963c196ed68496db71bd0a0d",
-            "max_drawdown": "cff75e065bc9f8cc412e6d233a22918070ea4c6cfae41a23d50b4c671ea401ba",
-            "risk_adjusted_returns": "b79864902c7d8c2504c41dd62bbaf459bbf33e6c0648aca5d8b70ee72ec7d5d7"
+            "max_drawdown": "1e0022c136abb12dee18aff6ae0ea5c30b4e6fd6ce9228a52bab649236c92e82",
+            "risk_adjusted_returns": "80f75abc3fde369ef97ffe983d23ce3f13bf8a6ea4aa25a9fbde223262841056"
         }
     },
     "zero-variance-loss@risk-free-rate": {
@@ -292,7 +292,7 @@
     "random-2500@risk-free-rate": {
         "risk_adjusted_returns": {
             "sharpe_ratio": "-0.0536",
-            "sortino_ratio": "-0.0706",
+            "sortino_ratio": "-0.0705",
             "mean_return": "-0.0027033769",
             "standard_deviation": "0.0596711236",
             "downside_deviation": "0.0453928812",
@@ -314,8 +314,8 @@
             "expectancy": "5af9ded2f59ca8f6d9140bcbd9d6165c00629a7067aafaa35ed586937491a07f",
             "risk_reward_ratio": "00c28945cd07987680e64527404b4c1f6b9ca23933f5e1b5aae0a59bc025b224",
             "win_rate_by_period": "04a4c3a8c7861dd1030aad055dd11a71db13410b34ecd630ce53509c0f41d1d1",
-            "max_drawdown": "c20a8b8156a1e9877475006cb781f3df894456fa0c87f14cbcb742ac02038382",
-            "risk_adjusted_returns": "54661715d6715b968ba8d270e5155db22d016b477b8ed471593cc87d9856b91e"
+            "max_drawdown": "7a93bf4216608d22c985eaa85bf33781b51f4a59a7d118a5d77039f60c244a20",
+            "risk_adjusted_returns": "adbce8d86040571f9fb5f5ae714284d7ab85355baaefdfa7985f20779bd0f0a7"
         }
     }
 }

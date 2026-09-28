@@ -254,7 +254,8 @@ it('honours the query order: the drawdown differs when it is reversed', function
     $chronological = TradingAnalytics::calculate(DB::table('trades')->orderBy('close_time'), only: [MaxDrawdown::class]);
     $reversed = TradingAnalytics::calculate(DB::table('trades')->orderByDesc('close_time'), only: [MaxDrawdown::class]);
 
-    expect((string) $chronological->maxDrawdown?->percentage)->toBe('47.6100')
+    // Equity 10, 5, 105, 55, 75: the 50 drop from the 105 peak is 47.619…%.
+    expect((string) $chronological->maxDrawdown?->percentage)->toBe('47.6190')
         ->and((string) $reversed->maxDrawdown?->percentage)->toBe('250.0000')
         ->and($reversed->toArray())->toBe(
             TradingAnalytics::calculate(array_reverse(orderSensitiveRows()), only: [MaxDrawdown::class])->toArray(),

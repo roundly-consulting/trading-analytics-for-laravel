@@ -15,6 +15,9 @@ use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
  */
 class RiskRewardRatio implements AnalyticsInterface
 {
+    /** The scale the ratio is divided at before it is truncated to its own. */
+    protected const int WORK_SCALE = 20;
+
     public static function calculatePerTrade(Analytics $analytics, Trade $trade): void
     {
         $result = $analytics->riskRewardRatio;
@@ -59,15 +62,18 @@ class RiskRewardRatio implements AnalyticsInterface
             );
         }
 
-        if ($result->averageLoss->isZero()) {
+        if ($result->winningTrades === 0 || $result->losingTrades === 0) {
             return;
         }
 
+        // (profit / wins) / (loss / losses), taken from the exact totals at the work scale and
+        // truncated only as the result: a 4-decimal average loss below 0.0001 was zero (a crash
+        // past the non-zero guard), and any other skewed the ratio.
+        $profit = $analytics->realizedProfitAndLoss->grossProfits->total->cloneWithScale(self::WORK_SCALE);
+        $loss = $analytics->realizedProfitAndLoss->grossLosses->total->cloneWithScale(self::WORK_SCALE)->abs();
+
         $result->value->set(
-            $result->averageWin->cloneWithScale(4)->divide(
-                value: $result->averageLoss->cloneWithScale(4),
-                immutable: true,
-            ),
+            $profit->multiply($result->losingTrades)->divide($loss->multiply($result->winningTrades)),
         );
     }
 }

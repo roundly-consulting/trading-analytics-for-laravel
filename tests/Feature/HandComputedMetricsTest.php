@@ -301,3 +301,39 @@ it('keeps a currency that is a base in one pair apart from the same currency as 
         ->and($analytics->streaks?->wins->forBaseCurrency('BTC')->total->toRawString())->toBe('2')
         ->and($analytics->streaks?->wins->global->total->toRawString())->toBe('4');
 });
+
+it('derives drawdown and risk-adjusted ratios at full precision', function (): void {
+    // Net equity +9, −2, +18: an 11 drop from a 9 peak is 122.2222…%, not 11.0000 / 9.0000
+    // truncated to 1.2222 first.
+    // Net returns 0.09, −0.055, 0.2: mean 0.0783333…, population deviation 0.1044296…,
+    // downside deviation 0.055 / √3 = 0.0317542…
+    $analytics = handComputed();
+
+    expect($analytics->maxDrawdown?->value->toRawString())->toBe('11.0000000000')
+        ->and($analytics->maxDrawdown?->percentage->toRawString())->toBe('122.2222')
+        ->and($analytics->riskAdjustedReturns?->meanReturn->toRawString())->toBe('0.0783333333')
+        ->and($analytics->riskAdjustedReturns?->standardDeviation->toRawString())->toBe('0.1044296679')
+        ->and($analytics->riskAdjustedReturns?->downsideDeviation->toRawString())->toBe('0.0317542648')
+        ->and($analytics->riskAdjustedReturns?->sharpeRatio->toRawString())->toBe('0.7501')
+        ->and($analytics->riskAdjustedReturns?->sortinoRatio->toRawString())->toBe('2.4668');
+});
+
+it('divides ratios whose inputs are smaller than 0.0001 instead of crashing', function (): void {
+    $trade = static fn (string $close, int $day): Trade => Trade::make('ETH', 'BTC', '0.05', $close, '1', 'buy', "2024-01-0{$day} 10:00:00", null, "2024-01-0{$day} 11:00:00");
+
+    // P&L +0.001 then −0.00005 BTC: reward/risk 0.001 / 0.00005.
+    $riskReward = Analytics::for(LazyCollection::make([$trade('0.051', 1), $trade('0.04995', 2)]))->calculate()->riskRewardRatio;
+    // Equity peaks at +0.00005, then falls to −0.00005: a 0.0001 drop, 200 % of the peak.
+    $drawdown = Analytics::for(LazyCollection::make([$trade('0.05005', 1), $trade('0.0499', 2)]))->calculate()->maxDrawdown;
+    // Returns +0.1 %, +0.2 %, −0.005 %: downside deviation √(0.00005² / 3) = 0.0000288675…
+    $returns = Analytics::for(LazyCollection::make([
+        Trade::make('X', 'USD', '100', '100.1', '1', 'buy', '2024-01-01 10:00:00', null, '2024-01-01 11:00:00'),
+        Trade::make('X', 'USD', '100', '100.2', '1', 'buy', '2024-01-02 10:00:00', null, '2024-01-02 11:00:00'),
+        Trade::make('X', 'USD', '100', '99.995', '1', 'buy', '2024-01-03 10:00:00', null, '2024-01-03 11:00:00'),
+    ]))->calculate()->riskAdjustedReturns;
+
+    expect($riskReward?->value->toRawString())->toBe('20.0000')
+        ->and($drawdown?->percentage->toRawString())->toBe('200.0000')
+        ->and($returns?->sharpeRatio->toRawString())->toBe('1.1748')
+        ->and($returns?->sortinoRatio->toRawString())->toBe('34.0636');
+});

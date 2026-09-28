@@ -14,6 +14,9 @@ use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
  */
 class MaxDrawdown implements AnalyticsInterface
 {
+    /** The scale the percentage is divided at before it is truncated to its own. */
+    protected const int WORK_SCALE = 20;
+
     public static function calculatePerTrade(Analytics $analytics, Trade $trade): void
     {
         $result = $analytics->maxDrawdown;
@@ -35,11 +38,13 @@ class MaxDrawdown implements AnalyticsInterface
         if ($drawdown->isGreaterThan($result->value)) {
             $result->value->set($drawdown);
 
+            // Full precision until the result: a peak below 0.0001 truncated to 4 decimals
+            // first was zero (a crash past the non-zero guard), and any other was skewed.
             if ($result->peak->isPositiveNonZero()) {
                 $result->percentage->set(
-                    $drawdown->cloneWithScale(4)
-                        ->divide(value: $result->peak->cloneWithScale(4), immutable: true)
-                        ->multiply(value: 100, immutable: true),
+                    $drawdown->cloneWithScale(self::WORK_SCALE)
+                        ->divide(value: $result->peak, immutable: true)
+                        ->multiply(value: 100),
                 );
             }
         }

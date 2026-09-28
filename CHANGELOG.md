@@ -95,3 +95,8 @@ Initial public release.
   leaves it at 0 with no unit, like a single trade.
 - A currency that is the base of one pair and the quote of another (BTC in BTC/USDT and ETH/BTC)
   no longer shares one frequency and one running streak between its two breakdowns.
+- The risk/reward ratio, Sharpe, Sortino and the drawdown percentage divide at full precision
+  and truncate only the result. Their operands were truncated to 4 decimals first, so an
+  average loss, deviation or peak below 0.0001 (P&L quoted in BTC, returns of a few basis
+  points) threw `DivisionByZeroException` and aborted the whole run, and every other value was
+  skewed (e.g. a 122.2222 % drawdown read 122.2200 %).
