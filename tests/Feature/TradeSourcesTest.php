@@ -29,9 +29,9 @@ use RoundlyConsulting\TradingAnalytics\TradingAnalyticsManager;
  */
 
 /**
- * Five realized BUY trades, one per day, whose net P&L runs +10, -5, +100, -50, +20. In this
- * order the 50 drop comes off a peak of 105 (a 47.61% drawdown); reversed, it comes off a
- * peak of 20 (250%).
+ * Five realized BUY trades, one per day, whose net P&L runs +10, -5, +100, -50, +20. In close
+ * order the 50 drop comes off a peak of 105 (a 47.619% drawdown); read backwards it would come
+ * off a peak of 20 (250%) — a sequence that never happened, which the engine refuses.
  *
  * @return list<array<string, string|null>>
  */
@@ -248,18 +248,17 @@ it('maps builder rows lazily through trades()', function (): void {
         ->and($trades->all())->toHaveCount(5)->each->toBeInstanceOf(Trade::class);
 });
 
-it('honours the query order: the drawdown differs when it is reversed', function (): void {
+it('follows the query order and refuses one that runs against close time', function (): void {
     TradesTable::seed(orderSensitiveRows());
 
     $chronological = TradingAnalytics::calculate(DB::table('trades')->orderBy('close_time'), only: [MaxDrawdown::class]);
-    $reversed = TradingAnalytics::calculate(DB::table('trades')->orderByDesc('close_time'), only: [MaxDrawdown::class]);
 
     // Equity 10, 5, 105, 55, 75: the 50 drop from the 105 peak is 47.619…%.
     expect((string) $chronological->maxDrawdown?->percentage)->toBe('47.6190')
-        ->and((string) $reversed->maxDrawdown?->percentage)->toBe('250.0000')
-        ->and($reversed->toArray())->toBe(
-            TradingAnalytics::calculate(array_reverse(orderSensitiveRows()), only: [MaxDrawdown::class])->toArray(),
-        );
+        ->and(fn () => TradingAnalytics::calculate(DB::table('trades')->orderByDesc('close_time'), only: [MaxDrawdown::class]))
+        ->toThrow(UnorderedTradeSourceException::class, 'arrived after one closed at [2024-03-05 11:00:00]')
+        ->and(fn () => TradingAnalytics::calculate(array_reverse(orderSensitiveRows()), only: [MaxDrawdown::class]))
+        ->toThrow(UnorderedTradeSourceException::class);
 });
 
 it('refuses an unordered source before running a query', function (Closure $source): void {

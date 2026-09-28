@@ -60,12 +60,16 @@ final class TradeDatasets
     }
 
     /**
-     * A lazy stream of `$count` pseudo-random trade rows in the `Trade::fromArray()` shape,
-     * chronological by open time. About 10% are open positions; 25% carry no commission.
+     * A lazy stream of `$count` pseudo-random trade rows in the `Trade::fromArray()` shape, in
+     * close-time order — as a query ordered by `close_time` returns them, and as the drawdown,
+     * streaks and cumulative return require. Each trade was opened up to a day before it
+     * closed, so the open times interleave. About 10% are open positions; 25% carry no
+     * commission.
      *
-     * `$spacing` is the gap in seconds between two opens (plus up to one gap of jitter). The
-     * golden vectors use the default; the memory tests shrink it so a long stream spans few
-     * win-rate buckets — those buckets are output, sized by the calendar, not by the history.
+     * `$spacing` is the gap in seconds between two closes (plus up to one gap of jitter, which
+     * keeps the closes in order). The golden vectors use the default; the memory tests shrink
+     * it so a long stream spans few win-rate buckets — those buckets are output, sized by the
+     * calendar, not by the history.
      *
      * @return Generator<int, array<string, string|null>>
      */
@@ -80,7 +84,9 @@ final class TradeDatasets
             $moveBasisPoints = self::draw($seed, $i, 'move', 2001) - 1000; // ±10%
             $closeCents = max(1, $openCents + intdiv($openCents * $moveBasisPoints, 10_000));
 
-            $openedAt = $epoch + $i * $spacing + self::draw($seed, $i, 'jitter', $spacing);
+            // Row i closes within [i, i + 1) spacings of the epoch, so the closes never run backwards.
+            $closedAt = $epoch + $i * $spacing + self::draw($seed, $i, 'jitter', $spacing);
+            $openedAt = $closedAt - 60 - self::draw($seed, $i, 'hold', 86_400);
             $isOpen = self::draw($seed, $i, 'is-open', 10) === 0;
 
             yield [
@@ -94,9 +100,7 @@ final class TradeDatasets
                 'commission' => self::draw($seed, $i, 'has-fee', 4) === 0
                     ? null
                     : self::decimal(self::draw($seed, $i, 'fee', 5000), 2),
-                'close_time' => $isOpen
-                    ? null
-                    : gmdate('Y-m-d H:i:s', $openedAt + 60 + self::draw($seed, $i, 'hold', 86_400)),
+                'close_time' => $isOpen ? null : gmdate('Y-m-d H:i:s', $closedAt),
             ];
         }
     }

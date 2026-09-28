@@ -38,6 +38,11 @@ use RoundlyConsulting\TradingAnalytics\Tests\Support\TradeDatasets;
  * - `max_drawdown`, `risk_adjusted_returns` (and the verbatim Sharpe / Sortino) — the drawdown
  *   percentage and both ratios divided operands truncated to 4 decimals (e.g. tiny's Sortino
  *   0.0175 / 0.0459 = 0.3812 instead of 0.0175 / 0.04596… = 0.3807).
+ * - random-2500 `frequency`, `win_rate_by_period` — the stream now arrives in close-time order
+ *   (the engine refuses anything else while the drawdown, streaks or cumulative return run): the
+ *   same rows in the same order with the same holding times, but each open time is now drawn
+ *   back from its close, so only the two open-time metrics moved. Its Sharpe, Sortino, drawdown,
+ *   expectancy, risk/reward, profit factor and win ratio were re-derived independently.
  *
  * @phpstan-type GoldenVector array{risk_adjusted_returns: array<string, string|int>, analytics_sha256: array<string, string>}
  */

@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 use Illuminate\Support\LazyCollection;
 use RoundlyConsulting\TradingAnalytics\Analytics;
+use RoundlyConsulting\TradingAnalytics\Analytics\GrossCumulativeReturn;
+use RoundlyConsulting\TradingAnalytics\Analytics\MaxDrawdown;
+use RoundlyConsulting\TradingAnalytics\Analytics\NetCumulativeReturn;
 use RoundlyConsulting\TradingAnalytics\Analytics\ProfitFactor;
 use RoundlyConsulting\TradingAnalytics\Analytics\Streaks;
 use RoundlyConsulting\TradingAnalytics\Analytics\TradingFrequency;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
+use RoundlyConsulting\TradingAnalytics\Exceptions\UnorderedTradeSourceException;
 
 /**
  * Every figure here is worked out by hand from four trades, independently of the engine, so a
@@ -336,4 +340,33 @@ it('divides ratios whose inputs are smaller than 0.0001 instead of crashing', fu
         ->and($drawdown?->percentage->toRawString())->toBe('200.0000')
         ->and($returns?->sharpeRatio->toRawString())->toBe('1.1748')
         ->and($returns?->sortinoRatio->toRawString())->toBe('34.0636');
+});
+
+it('refuses realized trades that arrive out of close-time order', function (): void {
+    // Trade 2 closed before trade 1: the drawdown and the streaks would follow a sequence
+    // that never happened.
+    $trades = handComputedTrades()->all();
+
+    expect(fn () => Analytics::for(LazyCollection::make([$trades[1], $trades[0], $trades[2]]))->calculate())
+        ->toThrow(UnorderedTradeSourceException::class, 'a trade closed at [2024-01-01 12:00:00] arrived after one closed at [2024-01-02 11:00:00]');
+});
+
+it('checks the order only for the calculators that follow it', function (): void {
+    $trades = handComputedTrades()->all();
+    $reversed = LazyCollection::make(array_reverse($trades));
+
+    $analytics = Analytics::for($reversed)->except([MaxDrawdown::class, Streaks::class, GrossCumulativeReturn::class, NetCumulativeReturn::class])->calculate();
+
+    expect($analytics->realizedProfitAndLoss?->grossProfits->total->toRawString())->toBe('30.0000000000')
+        ->and($analytics->maxDrawdown)->toBeNull();
+});
+
+it('lets open trades and equal close times come in any order', function (): void {
+    [$first, $second, $third, $open] = handComputedTrades()->all();
+    $sameClose = Trade::make('ETH', 'USD', '50', '55', '1', 'buy', '2024-01-03 09:00:00', null, '2024-01-03 14:00:00');
+
+    $analytics = Analytics::for(LazyCollection::make([$open, $first, $second, $third, $sameClose]))->calculate();
+
+    expect($analytics->maxDrawdown?->value->toRawString())->toBe('11.0000000000')
+        ->and($analytics->streaks?->wins->global->total->toRawString())->toBe('2');
 });

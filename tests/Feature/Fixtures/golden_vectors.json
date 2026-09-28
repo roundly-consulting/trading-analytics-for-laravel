@@ -221,12 +221,12 @@
             "profit_and_loss": "94803fcdae13b25c4f52f68b7fda57c154cd5040b815152fb9d3f334a666fb62",
             "profit_factor": "7d6ecb1150c967577020df64a51047a4079f3bc6553880da87339eb2cdb5e9d5",
             "cumulative_return": "c3fe1b015159c93bbf51fef3ba9199b03dc76cf77ff84a58880243c00bc1e80e",
-            "frequency": "78a34f4a40476e0bf81d1b7a7e7762d83de2764be8b703ccdd72c417b2691cf6",
+            "frequency": "77720ecc80178023ddbd4fd5acf15d43b9448a00ff0571795ca0f41a340ded84",
             "duration": "4f1886230d495b6b4683deaabb318e0c090e97fe658849237a6919dbacc3fc6e",
             "streaks": "e054c905752033bb00e109d9d8d5fc0ccf1949e9ea603dc1965fb8af69dcf46d",
             "expectancy": "5af9ded2f59ca8f6d9140bcbd9d6165c00629a7067aafaa35ed586937491a07f",
             "risk_reward_ratio": "00c28945cd07987680e64527404b4c1f6b9ca23933f5e1b5aae0a59bc025b224",
-            "win_rate_by_period": "04a4c3a8c7861dd1030aad055dd11a71db13410b34ecd630ce53509c0f41d1d1",
+            "win_rate_by_period": "59d9d75176b1f00f2278fb2b27a458c8a97dcc1f989f80417aaf49f2ab212b5d",
             "max_drawdown": "7a93bf4216608d22c985eaa85bf33781b51f4a59a7d118a5d77039f60c244a20",
             "risk_adjusted_returns": "2cc7163353145012205db35f9009fbd183eda42090ddfabe9d9f7e3283143d84"
         }
@@ -308,12 +308,12 @@
             "profit_and_loss": "94803fcdae13b25c4f52f68b7fda57c154cd5040b815152fb9d3f334a666fb62",
             "profit_factor": "7d6ecb1150c967577020df64a51047a4079f3bc6553880da87339eb2cdb5e9d5",
             "cumulative_return": "c3fe1b015159c93bbf51fef3ba9199b03dc76cf77ff84a58880243c00bc1e80e",
-            "frequency": "78a34f4a40476e0bf81d1b7a7e7762d83de2764be8b703ccdd72c417b2691cf6",
+            "frequency": "77720ecc80178023ddbd4fd5acf15d43b9448a00ff0571795ca0f41a340ded84",
             "duration": "4f1886230d495b6b4683deaabb318e0c090e97fe658849237a6919dbacc3fc6e",
             "streaks": "e054c905752033bb00e109d9d8d5fc0ccf1949e9ea603dc1965fb8af69dcf46d",
             "expectancy": "5af9ded2f59ca8f6d9140bcbd9d6165c00629a7067aafaa35ed586937491a07f",
             "risk_reward_ratio": "00c28945cd07987680e64527404b4c1f6b9ca23933f5e1b5aae0a59bc025b224",
-            "win_rate_by_period": "04a4c3a8c7861dd1030aad055dd11a71db13410b34ecd630ce53509c0f41d1d1",
+            "win_rate_by_period": "59d9d75176b1f00f2278fb2b27a458c8a97dcc1f989f80417aaf49f2ab212b5d",
             "max_drawdown": "7a93bf4216608d22c985eaa85bf33781b51f4a59a7d118a5d77039f60c244a20",
             "risk_adjusted_returns": "adbce8d86040571f9fb5f5ae714284d7ab85355baaefdfa7985f20779bd0f0a7"
         }

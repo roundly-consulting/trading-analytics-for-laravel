@@ -21,7 +21,9 @@ use RoundlyConsulting\TradingAnalytics\Facades\TradingAnalytics;
  * Corrected since (each figure recomputed independently from the fixture's trades): the
  * win / loss / break-even counts and the win rate are over the closed trades (they counted
  * open positions too), and `gross_profit` / `gross_loss` / `profit_factor` are the realized
- * gross profit and loss (they summed every trade, open ones included).
+ * gross profit and loss (they summed every trade, open ones included). The rows are read in
+ * close-time order, as the sequential calculators require; the maximum drawdown (911) is the
+ * same as in id order.
  *
  * @phpstan-type TradeRow array{
  *     base_currency: string,
@@ -141,7 +143,8 @@ afterEach(function (): void {
 function loadTrades(): LazyCollection
 {
     return Trade::collect(
-        DB::table('trades')->orderBy('id')->lazy()->map(static fn (object $row): array => [
+        // In close-time order, as the drawdown, streaks and cumulative return require.
+        DB::table('trades')->orderBy('closed_at')->orderBy('id')->lazy()->map(static fn (object $row): array => [
             'base_currency' => $row->base_currency,
             'quote_currency' => $row->quote_currency,
             'open_price' => $row->open_price,

@@ -239,6 +239,7 @@ dataset('closed-with-returns-40-20-15', [
     ],
 ]);
 
+// In close-time order, as the sequential calculators (drawdown, streaks, cumulative return) require.
 dataset('frequency-test-trades', [
     'frequency-test-trades' => [
         new LazyCollection([
@@ -254,17 +255,6 @@ dataset('frequency-test-trades', [
                 closeTime: Carbon::create(2024, 8, 1, 12),
             ),
             new Trade(
-                baseCurrency: 'BTC',
-                quoteCurrency: 'USD',
-                openPrice: new NumericValueAsString('0.00001'),
-                closePrice: new NumericValueAsString('0.000014'),
-                size: new NumericValueAsString('1500000000'),
-                direction: Direction::BUY,
-                openTime: Carbon::create(2024, 8, 2, 13),
-                commission: new NumericValueAsString('250.005'),
-                closeTime: Carbon::create(2024, 8, 2, 13),
-            ),
-            new Trade(
                 baseCurrency: 'ETH',
                 quoteCurrency: 'USD',
                 openPrice: new NumericValueAsString('0.00001'),
@@ -274,6 +264,17 @@ dataset('frequency-test-trades', [
                 openTime: Carbon::create(2024, 8, 1, 15),
                 commission: new NumericValueAsString('250.005'),
                 closeTime: Carbon::create(2024, 8, 1, 15),
+            ),
+            new Trade(
+                baseCurrency: 'BTC',
+                quoteCurrency: 'USD',
+                openPrice: new NumericValueAsString('0.00001'),
+                closePrice: new NumericValueAsString('0.000014'),
+                size: new NumericValueAsString('1500000000'),
+                direction: Direction::BUY,
+                openTime: Carbon::create(2024, 8, 2, 13),
+                commission: new NumericValueAsString('250.005'),
+                closeTime: Carbon::create(2024, 8, 2, 13),
             ),
             new Trade(
                 baseCurrency: 'BTC',

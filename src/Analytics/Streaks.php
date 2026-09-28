@@ -9,13 +9,13 @@ use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericByDirections;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalByCurrency;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
-use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
+use RoundlyConsulting\TradingAnalytics\Interfaces\SequentialAnalyticsInterface;
 
 /**
  * Longest runs of consecutive winning and losing closed trades. A break-even trade is
  * neither, so it ends both runs.
  */
-class Streaks implements AnalyticsInterface
+class Streaks implements SequentialAnalyticsInterface
 {
     public static function calculatePerTrade(Analytics $analytics, Trade $trade): void
     {

@@ -28,7 +28,9 @@ use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results\Wins;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 use RoundlyConsulting\TradingAnalytics\Enums\Period;
 use RoundlyConsulting\TradingAnalytics\Exceptions\UnknownCalculatorException;
+use RoundlyConsulting\TradingAnalytics\Exceptions\UnorderedTradeSourceException;
 use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
+use RoundlyConsulting\TradingAnalytics\Interfaces\SequentialAnalyticsInterface;
 use RoundlyConsulting\TradingAnalytics\Traits\HasScale;
 use RoundlyConsulting\TradingAnalytics\Traits\SerializesToJson;
 
@@ -253,12 +255,29 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
         return $this;
     }
 
+    /**
+     * Run every active calculator over the trades in one pass.
+     *
+     * @throws UnorderedTradeSourceException when a realized trade closed before the one read
+     *                                       ahead of it while a sequential calculator runs
+     */
     public function calculate(): static
     {
         $this->initializeAnalyticsResults();
 
+        $sequential = $this->runsSequentialCalculators();
+        $lastClose = null;
+
         // Go through each trade once and run every active calculator's per-trade hook.
         foreach ($this->trades as $trade) {
+            if ($sequential && $trade->closeTime !== null) {
+                if ($lastClose !== null && $trade->closeTime->lessThan($lastClose)) {
+                    throw UnorderedTradeSourceException::outOfOrder($lastClose, $trade->closeTime);
+                }
+
+                $lastClose = $trade->closeTime;
+            }
+
             foreach ($this->calculators as $calculator) {
                 $this->calculatePerTrade($calculator, $trade);
             }
@@ -271,6 +290,21 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
         $this->hasBeenCalculated = true;
 
         return $this;
+    }
+
+    /**
+     * Whether an active calculator follows the order trades close in — the only case the
+     * order of the input is checked. Open trades have no close time and may come anywhere.
+     */
+    protected function runsSequentialCalculators(): bool
+    {
+        foreach ($this->calculators as $calculator) {
+            if (is_a($calculator, SequentialAnalyticsInterface::class, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function hasBeenCalculated(): bool

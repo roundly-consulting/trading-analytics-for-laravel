@@ -10,7 +10,7 @@ use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalAgg
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericDirectionalAggregatesByCurrency;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
-use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
+use RoundlyConsulting\TradingAnalytics\Interfaces\SequentialAnalyticsInterface;
 use RoundlyConsulting\TradingAnalytics\Support\BcMath;
 
 /**
@@ -22,7 +22,7 @@ use RoundlyConsulting\TradingAnalytics\Support\BcMath;
  * growth factors (1 + return); the after-trades hook turns them into the cumulative return
  * and its geometric mean.
  */
-class GrossCumulativeReturn implements AnalyticsInterface
+class GrossCumulativeReturn implements SequentialAnalyticsInterface
 {
     public static function calculatePerTrade(Analytics $analytics, Trade $trade): void
     {

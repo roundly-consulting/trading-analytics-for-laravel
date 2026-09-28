@@ -6,13 +6,13 @@ namespace RoundlyConsulting\TradingAnalytics\Analytics;
 
 use RoundlyConsulting\TradingAnalytics\Analytics;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
-use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
+use RoundlyConsulting\TradingAnalytics\Interfaces\SequentialAnalyticsInterface;
 
 /**
  * Largest peak-to-trough drop of the realized equity curve, tracked with a
  * running peak in the single pass (no equity series stored).
  */
-class MaxDrawdown implements AnalyticsInterface
+class MaxDrawdown implements SequentialAnalyticsInterface
 {
     /** The scale the percentage is divided at before it is truncated to its own. */
     protected const int WORK_SCALE = 20;

@@ -100,3 +100,8 @@ Initial public release.
   average loss, deviation or peak below 0.0001 (P&L quoted in BTC, returns of a few basis
   points) threw `DivisionByZeroException` and aborted the whole run, and every other value was
   skewed (e.g. a 122.2222 % drawdown read 122.2200 %).
+- The maximum drawdown, streaks and running cumulative return no longer silently follow
+  whatever order the trades arrive in: while any of them runs (new
+  `SequentialAnalyticsInterface` marker), a realized trade that closed before the one read ahead
+  of it throws `UnorderedTradeSourceException`. Open trades and equal close times may come in
+  any order, and a run without those calculators accepts any order.
