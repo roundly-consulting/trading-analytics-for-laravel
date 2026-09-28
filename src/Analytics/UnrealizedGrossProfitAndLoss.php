@@ -18,8 +18,17 @@ class UnrealizedGrossProfitAndLoss extends BaseNumericDirectionalAggregatesByCur
         return $trade->isOpen();
     }
 
+    /**
+     * The profit/loss split is written here, outside the base per-trade hook, so it must
+     * apply the same filter itself: without it every realized trade landed in the unrealized
+     * profits and losses too, and every open one in the realized.
+     */
     public static function calculatePerTrade(Analytics $analytics, Trade $trade): void
     {
+        if (! static::shouldCalculatePerTrade($analytics, $trade)) {
+            return;
+        }
+
         parent::calculatePerTrade($analytics, $trade);
         static::calculateTotalProfitsAndLosses($analytics, $trade);
     }
@@ -47,6 +56,11 @@ class UnrealizedGrossProfitAndLoss extends BaseNumericDirectionalAggregatesByCur
     protected static function calculateTotalProfitsAndLosses(Analytics $analytics, Trade $trade): void
     {
         $pnl = static::value($trade);
+
+        // A break-even trade is neither a profit nor a loss.
+        if ($pnl->isZero()) {
+            return;
+        }
 
         $dto = $pnl->isPositiveNonZero() ? static::dtoForProfits($analytics) : static::dtoForLosses($analytics);
 

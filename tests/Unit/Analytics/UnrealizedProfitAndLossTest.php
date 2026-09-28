@@ -186,17 +186,12 @@ it('correctly returns unrealized profits and losses', function (LazyCollection $
                         'USD' => '0.1650000000',
                     ],
                 ],
+                // The only open trade is a winner; the realized SHIB/EUR losses stay out.
                 'losses' => [
-                    'total' => '-0.0430000000',
-                    'per_pair' => [
-                        'SHIB/EUR' => '-0.0430000000',
-                    ],
-                    'per_base_currency' => [
-                        'SHIB' => '-0.0430000000',
-                    ],
-                    'per_quote_currency' => [
-                        'EUR' => '-0.0430000000',
-                    ],
+                    'total' => '0.0000000000',
+                    'per_pair' => [],
+                    'per_base_currency' => [],
+                    'per_quote_currency' => [],
                 ],
             ],
             'net' => [
@@ -372,17 +367,12 @@ it('correctly returns unrealized profits and losses', function (LazyCollection $
                         'USD' => '0.1650000000',
                     ],
                 ],
+                // The only open trade is a winner; the realized SHIB/EUR losses stay out.
                 'losses' => [
-                    'total' => '-16.5430000000',
-                    'per_pair' => [
-                        'SHIB/EUR' => '-16.5430000000',
-                    ],
-                    'per_base_currency' => [
-                        'SHIB' => '-16.5430000000',
-                    ],
-                    'per_quote_currency' => [
-                        'EUR' => '-16.5430000000',
-                    ],
+                    'total' => '0.0000000000',
+                    'per_pair' => [],
+                    'per_base_currency' => [],
+                    'per_quote_currency' => [],
                 ],
             ],
         ]);

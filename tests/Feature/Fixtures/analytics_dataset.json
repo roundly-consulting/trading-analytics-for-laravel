@@ -6617,9 +6617,9 @@
         "gross_sell_realized_pnl": "450.0000000000",
         "total_commissions": "1995.0000000000",
         "realized_commissions": "1924.0000000000",
-        "gross_profit": "3588.0000000000",
-        "gross_loss": "-2412.0000000000",
-        "profit_factor": "1.48",
+        "gross_profit": "3085.0000000000",
+        "gross_loss": "-2064.0000000000",
+        "profit_factor": "1.49",
         "max_drawdown": "911.0000000000",
         "gross_realized_pnl_by_quote_currency": {
             "USD": "525.0000000000",

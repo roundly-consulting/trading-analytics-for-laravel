@@ -65,3 +65,9 @@ Initial public release.
   is not well-formed`): `NumericValueAsString::of('1e-5')`, `Trade::make(size: 0.00001)` and
   padded strings like `' 12.5 '` are expanded exactly into plain decimals. `INF` / `NAN` and an
   exponent above 1000 throw `InvalidNumericOperationException`.
+- Realized and unrealized profits and losses no longer leak into each other: the profit/loss
+  split ran for every trade, so each realized trade also landed in the unrealized
+  `grossProfits` / `grossLosses` / `netProfits` / `netLosses` and each open one in the realized.
+  A break-even trade now lands in neither.
+- The profit factor is realized gross profit over realized gross loss (it read the unrealized
+  aggregates), and a loss-only pair or currency reads `0.00` instead of going missing.

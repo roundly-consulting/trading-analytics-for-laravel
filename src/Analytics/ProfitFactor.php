@@ -9,6 +9,10 @@ use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
 
+/**
+ * Realized gross profit divided by realized gross loss — globally and per pair / base / quote
+ * currency. Undefined (no realized loss) reads 0.
+ */
 class ProfitFactor implements AnalyticsInterface
 {
     public static function calculatePerTrade(Analytics $analytics, Trade $trade): void
@@ -18,48 +22,41 @@ class ProfitFactor implements AnalyticsInterface
 
     public static function calculateAfterTrades(Analytics $analytics): void
     {
-        $analytics->profitFactor->total->set(static::calculateProfitFactor(
-            profit: $analytics->unrealizedProfitAndLoss->grossProfits->total,
-            loss: $analytics->unrealizedProfitAndLoss->grossLosses->total,
-        ));
+        $profits = $analytics->realizedProfitAndLoss->grossProfits;
+        $losses = $analytics->realizedProfitAndLoss->grossLosses;
 
-        $grossProfitsPerPair = $analytics->unrealizedProfitAndLoss->grossProfits->perPair;
-        $grossLossesPerPair = $analytics->unrealizedProfitAndLoss->grossLosses->perPair;
+        $analytics->profitFactor->total->set(static::calculateProfitFactor($profits->total, $losses->total));
 
-        foreach ($grossProfitsPerPair as $pair => $profit) {
-            $loss = $grossLossesPerPair[$pair] ?? null;
-
-            $profitFactor = static::calculateProfitFactor(
-                profit: $profit,
-                loss: $loss,
+        foreach (static::keys($profits->perPair, $losses->perPair) as $pair) {
+            $analytics->profitFactor->forPair($pair)->set(
+                static::calculateProfitFactor($profits->perPair[$pair] ?? null, $losses->perPair[$pair] ?? null),
             );
-
-            $analytics->profitFactor->forPair($pair)->set($profitFactor);
         }
 
-        $grossProfitsPerBaseCurrency = $analytics->unrealizedProfitAndLoss->grossProfits->perBaseCurrency;
-        $grossLossesPerBaseCurrency = $analytics->unrealizedProfitAndLoss->grossLosses->perBaseCurrency;
-
-        foreach ($grossProfitsPerBaseCurrency as $baseCurrency => $profit) {
-            $loss = $grossLossesPerBaseCurrency[$baseCurrency] ?? null;
-
-            $analytics->profitFactor->forBaseCurrency($baseCurrency)->set(static::calculateProfitFactor(
-                profit: $profit,
-                loss: $loss,
-            ));
+        foreach (static::keys($profits->perBaseCurrency, $losses->perBaseCurrency) as $baseCurrency) {
+            $analytics->profitFactor->forBaseCurrency($baseCurrency)->set(
+                static::calculateProfitFactor($profits->perBaseCurrency[$baseCurrency] ?? null, $losses->perBaseCurrency[$baseCurrency] ?? null),
+            );
         }
 
-        $grossProfitsPerQuoteCurrency = $analytics->unrealizedProfitAndLoss->grossProfits->perQuoteCurrency;
-        $grossLossesPerQuoteCurrency = $analytics->unrealizedProfitAndLoss->grossLosses->perQuoteCurrency;
-
-        foreach ($grossProfitsPerQuoteCurrency as $quoteCurrency => $profit) {
-            $loss = $grossLossesPerQuoteCurrency[$quoteCurrency] ?? null;
-
-            $analytics->profitFactor->forQuoteCurrency($quoteCurrency)->set(static::calculateProfitFactor(
-                profit: $profit,
-                loss: $loss,
-            ));
+        foreach (static::keys($profits->perQuoteCurrency, $losses->perQuoteCurrency) as $quoteCurrency) {
+            $analytics->profitFactor->forQuoteCurrency($quoteCurrency)->set(
+                static::calculateProfitFactor($profits->perQuoteCurrency[$quoteCurrency] ?? null, $losses->perQuoteCurrency[$quoteCurrency] ?? null),
+            );
         }
+    }
+
+    /**
+     * Every key with a realized profit or a realized loss, so a loss-only pair reads 0 rather
+     * than going missing.
+     *
+     * @param  array<string, NumericValueAsString>  $profits
+     * @param  array<string, NumericValueAsString>  $losses
+     * @return list<string>
+     */
+    protected static function keys(array $profits, array $losses): array
+    {
+        return array_map(strval(...), array_keys($profits + $losses));
     }
 
     protected static function calculateProfitFactor(

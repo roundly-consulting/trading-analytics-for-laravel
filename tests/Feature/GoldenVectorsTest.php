@@ -17,6 +17,14 @@ use RoundlyConsulting\TradingAnalytics\Tests\Support\TradeDatasets;
  *
  * Never regenerate this file to make a red test green: a moved vector is a behaviour change.
  *
+ * Re-frozen deliberately where a vector had frozen a bug. Each entry names the only sections
+ * that moved; every other section of every vector held. The corrected figures are pinned by
+ * hand, independently of the engine, in HandComputedMetricsTest.
+ *
+ * - `profit_and_loss`, `profit_factor`, `expectancy`, `risk_reward_ratio` — realized and
+ *   unrealized profits/losses leaked into each other (every trade landed on both sides), and
+ *   the profit factor read the unrealized side.
+ *
  * @phpstan-type GoldenVector array{risk_adjusted_returns: array<string, string|int>, analytics_sha256: array<string, string>}
  */
 

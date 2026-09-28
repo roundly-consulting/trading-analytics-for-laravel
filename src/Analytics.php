@@ -130,7 +130,7 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
         Analytics\TradesDuration::class => [Analytics\Counts::class],
         Analytics\Wins::class => [Analytics\Counts::class],
         Analytics\TradingFrequency::class => [Analytics\Counts::class],
-        Analytics\ProfitFactor::class => [Analytics\UnrealizedGrossProfitAndLoss::class],
+        Analytics\ProfitFactor::class => [Analytics\RealizedGrossProfitAndLoss::class],
         Analytics\GrossCumulativeReturn::class => [Analytics\Counts::class],
         Analytics\NetCumulativeReturn::class => [Analytics\Counts::class],
         Analytics\Expectancy::class => [Analytics\RealizedGrossProfitAndLoss::class],

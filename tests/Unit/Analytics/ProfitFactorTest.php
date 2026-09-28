@@ -21,10 +21,13 @@ it('correctly returns profit factors', function (LazyCollection $trades) {
             'per_pair' => [
                 'BTC/USD' => '0.00',
                 'ETH/USD' => '1.75',
+                // XRP/USD only lost: a loss-only key reads 0 instead of going missing.
+                'XRP/USD' => '0.00',
             ],
             'per_base_currency' => [
                 'BTC' => '0.00',
                 'ETH' => '1.75',
+                'XRP' => '0.00',
             ],
             'per_quote_currency' => [
                 'USD' => '1.58',

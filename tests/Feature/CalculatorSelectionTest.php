@@ -130,10 +130,11 @@ it('keeps an excluded calculator that a remaining one depends on', function (): 
 });
 
 it('pulls dependencies in transitively', function (): void {
-    // ProfitFactor needs the unrealized gross P&L, which in turn divides by the counts.
+    // ProfitFactor needs the realized gross P&L, which in turn divides by the counts.
     $analytics = TradingAnalytics::calculate(TradeDatasets::golden('mixed-signs'), only: [ProfitFactor::class]);
 
     expect($analytics->counts)->not->toBeNull()
-        ->and($analytics->unrealizedProfitAndLoss)->not->toBeNull()
+        ->and($analytics->realizedProfitAndLoss)->not->toBeNull()
+        ->and($analytics->unrealizedProfitAndLoss)->toBeNull()
         ->and($analytics->streaks)->toBeNull();
 });

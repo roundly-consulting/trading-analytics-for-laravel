@@ -237,9 +237,9 @@ it('matches the fixture realized p&l, commissions and profit factor', function (
         ->toBe($expected['gross_sell_realized_pnl'])
         ->and((string) $analytics->commission->global->total->total)
         ->toBe($expected['total_commissions'])
-        ->and((string) $analytics->unrealizedProfitAndLoss->grossProfits->total)
+        ->and((string) $analytics->realizedProfitAndLoss->grossProfits->total)
         ->toBe($expected['gross_profit'])
-        ->and((string) $analytics->unrealizedProfitAndLoss->grossLosses->total)
+        ->and((string) $analytics->realizedProfitAndLoss->grossLosses->total)
         ->toBe($expected['gross_loss'])
         ->and((string) $analytics->profitFactor->total)
         ->toBe($expected['profit_factor']);
