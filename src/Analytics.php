@@ -111,11 +111,23 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
 
     /**
      * Calculators that depend on aggregates produced by other calculators, so
-     * selecting one with {@see only()} also pulls its dependencies in.
+     * selecting one with {@see only()} also pulls its dependencies in — transitively —
+     * and {@see except()} keeps a dependency a remaining calculator still needs.
+     *
+     * Every calculator built on the directional-aggregates base divides its totals by the
+     * trade counts to get its averages, so each of them depends on {@see Analytics\Counts}.
      *
      * @var array<class-string<AnalyticsInterface>, list<class-string<AnalyticsInterface>>>
      */
     protected array $dependencies = [
+        Analytics\TradingVolume::class => [Analytics\Counts::class],
+        Analytics\TradingValue::class => [Analytics\Counts::class],
+        Analytics\Commissions::class => [Analytics\Counts::class],
+        Analytics\UnrealizedGrossProfitAndLoss::class => [Analytics\Counts::class],
+        Analytics\UnrealizedNetProfitAndLoss::class => [Analytics\Counts::class],
+        Analytics\RealizedGrossProfitAndLoss::class => [Analytics\Counts::class],
+        Analytics\RealizedNetProfitAndLoss::class => [Analytics\Counts::class],
+        Analytics\TradesDuration::class => [Analytics\Counts::class],
         Analytics\Wins::class => [Analytics\Counts::class],
         Analytics\TradingFrequency::class => [Analytics\Counts::class],
         Analytics\ProfitFactor::class => [Analytics\UnrealizedGrossProfitAndLoss::class],
@@ -212,7 +224,9 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
     }
 
     /**
-     * Run every calculator except the given ones.
+     * Run every calculator except the given ones. An excluded calculator that a remaining
+     * one depends on still runs (e.g. `Counts`, which every average divides by); only its
+     * dependents' figures are wanted, but they cannot be computed without it.
      *
      * @param  list<class-string<AnalyticsInterface>>  $calculators
      */
@@ -222,10 +236,10 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
             $this->assertIsCalculator($calculator);
         }
 
-        $this->calculators = array_values(array_filter(
+        $this->calculators = $this->resolveCalculators(array_values(array_filter(
             $this->defaultCalculators,
             static fn (string $calculator): bool => ! in_array($calculator, $calculators, true),
-        ));
+        )));
 
         return $this;
     }
@@ -379,8 +393,8 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
     }
 
     /**
-     * Validate and expand a requested calculator set with its dependencies,
-     * preserving the canonical run order.
+     * Validate and expand a requested calculator set with its dependencies — and theirs,
+     * transitively — preserving the canonical run order.
      *
      * @param  list<class-string<AnalyticsInterface>>  $requested
      * @return list<class-string<AnalyticsInterface>>
@@ -388,14 +402,21 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
     protected function resolveCalculators(array $requested): array
     {
         $wanted = [];
+        $pending = $requested;
 
-        foreach ($requested as $calculator) {
+        while ($pending !== []) {
+            $calculator = array_pop($pending);
+
             $this->assertIsCalculator($calculator);
+
+            if (isset($wanted[$calculator])) {
+                continue;
+            }
 
             $wanted[$calculator] = true;
 
             foreach ($this->dependencies[$calculator] ?? [] as $dependency) {
-                $wanted[$dependency] = true;
+                $pending[] = $dependency;
             }
         }
 

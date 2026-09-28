@@ -260,6 +260,11 @@ $analytics = Analytics::make($trades)->only([Counts::class])->calculate(); // sa
 $analytics = Analytics::make($trades)->except([Streaks::class])->calculate();
 ```
 
+Every calculator runs on its own: `only()` pulls in what it needs, and what that needs in turn
+(`ProfitFactor` brings the unrealized P&L, which brings `Counts`). `except()` still runs an
+excluded calculator that a remaining one depends on — `except([Counts::class])` keeps the counts,
+because every average is divided by them. The figures match a full run either way.
+
 Passing a class that is not a registered calculator throws an `UnknownCalculatorException`. To
 discover what `only()` / `except()` accept, call `metrics()`:
 

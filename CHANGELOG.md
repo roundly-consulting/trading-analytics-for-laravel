@@ -56,3 +56,8 @@ Initial public release.
   Newton's method at 1, so a large growth factor (e.g. 1,000× over 1,000 trades) came back far too
   high. Its intermediates also grew with the trade count (a 50,000-trade root took ~17 s); they now
   stay at a fixed scale.
+- `only([...])` / `calculate(only: [...])` crashed for 11 of the 20 calculators (`Attempt to read
+  property "global" on null`): every calculator on the directional-aggregates base divides by the
+  counts without declaring `Counts` as a dependency, and dependencies were resolved one level deep
+  only. Dependencies are now declared and resolved transitively, and `except()` keeps a
+  dependency a remaining calculator still needs.
