@@ -23,9 +23,10 @@ abstract class TestCase extends PackageTestCase
     }
 
     /**
-     * No `migrationSources()`: this package ships no migrations and never opens a
-     * database connection — it is a pure calculation engine over an in-memory
-     * LazyCollection of trades. That is also why the row carries no pgsql leg.
+     * No `migrationSources()`: this package ships no migrations. It does read the host's
+     * database, though — a query builder, Eloquent builder or relation passed as a trade
+     * source is paged with `lazy()` — so the suites build a host `trades` table by hand
+     * (tests/Support/TradesTable.php) and the workflow runs them on Postgres as well.
      *
      * The old `getEnvironmentSetUp()` set `database.default` to 'testing' and nothing
      * else; `PackageTestCase` does that (and the rest of the driver wiring) itself.

@@ -21,6 +21,11 @@ final class InvalidTradeException extends TradingAnalyticsException
         return new self("A trade is missing the required '{$field}' field.");
     }
 
+    public static function invalidField(string $field, string $expected, mixed $value): self
+    {
+        return new self("A trade's '{$field}' field must be {$expected}; got ".get_debug_type($value).'.');
+    }
+
     public static function invalidDirection(string $value): self
     {
         return new self("'{$value}' is not a valid trade direction; expected one of: buy, sell.");

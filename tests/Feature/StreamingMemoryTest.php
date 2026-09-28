@@ -2,8 +2,13 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\DB;
+use RoundlyConsulting\TradingAnalytics\Analytics\MaxDrawdown;
+use RoundlyConsulting\TradingAnalytics\Analytics\RiskAdjustedReturns;
+use RoundlyConsulting\TradingAnalytics\Analytics\Streaks;
 use RoundlyConsulting\TradingAnalytics\Facades\TradingAnalytics;
 use RoundlyConsulting\TradingAnalytics\Tests\Support\TradeDatasets;
+use RoundlyConsulting\TradingAnalytics\Tests\Support\TradesTable;
 
 /**
  * The engine promises constant memory in the length of the trade history: nothing in the
@@ -46,4 +51,26 @@ it('streams a 50,000-trade generator through every calculator in constant memory
     expect($analytics->counts?->global->total->toInt())->toBe(STREAMED_TRADES)
         ->and($analytics->riskAdjustedReturns?->sampleSize)->toBeGreaterThan(40_000)
         ->and($growth)->toBeLessThan(MEMORY_BOUND_BYTES);
+});
+
+it('streams a 50,000-row query builder in 500-row pages in constant memory', function (): void {
+    TradesTable::create();
+    TradesTable::seed(TradeDatasets::randomRows(STREAMED_TRADES, spacing: 60));
+
+    DB::enableQueryLog();
+
+    // The calculators are proven above; this run proves the source: the pages, not the table.
+    [$analytics, $growth] = peakGrowthOf(static fn (int $count) => TradingAnalytics::calculate(
+        DB::table('trades')->where('id', '<=', $count)->orderBy('close_time')->orderBy('id'),
+        only: [RiskAdjustedReturns::class, MaxDrawdown::class, Streaks::class],
+        chunk: 500,
+    ));
+
+    $selects = array_column(DB::getQueryLog(), 'query');
+
+    expect($analytics->riskAdjustedReturns?->sampleSize)->toBeGreaterThan(40_000)
+        ->and($growth)->toBeLessThan(MEMORY_BOUND_BYTES)
+        // 2 pages for the warm-up run, then 100 full pages and the empty one that ends it.
+        ->and($selects)->toHaveCount(2 + 101)
+        ->each->toContain('limit 500');
 });

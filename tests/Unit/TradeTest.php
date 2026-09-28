@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\LazyCollection;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\NumericValueAsString;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 use RoundlyConsulting\TradingAnalytics\Enums\Direction;
+use RoundlyConsulting\TradingAnalytics\Enums\Period;
 use RoundlyConsulting\TradingAnalytics\Exceptions\InvalidTradeException;
+use RoundlyConsulting\TradingAnalytics\Tests\Support\Side;
 
 it('returns correctly pair', function (LazyCollection $trades) {
     /** @var Trade $trade */
@@ -327,3 +330,33 @@ it('serializes a trade to json', function (LazyCollection $trades) {
     expect($trade->toJson())->toBe(json_encode($trade->toArray()))
         ->and(json_encode($trade))->toBe($trade->toJson());
 })->with('closed-with-returns-40-20-15');
+
+it('takes any DateTimeInterface and a host string-backed enum through make', function () {
+    $trade = Trade::make(
+        baseCurrency: 'BTC',
+        quoteCurrency: 'USD',
+        openPrice: '1',
+        closePrice: '2',
+        size: '1',
+        direction: Side::Short,
+        openTime: new DateTimeImmutable('2024-01-01 12:00:00'),
+        closeTime: CarbonImmutable::parse('2024-01-01 13:00:00'),
+    );
+
+    expect($trade->direction)->toBe(Direction::SELL)
+        ->and($trade->openTime)->toBeInstanceOf(Carbon::class)
+        ->and($trade->openTime->toDateTimeString())->toBe('2024-01-01 12:00:00')
+        ->and($trade->closeTime)->toBeInstanceOf(Carbon::class);
+});
+
+it('refuses an enum whose value is not a direction', function () {
+    expect(fn () => Trade::make(
+        baseCurrency: 'BTC',
+        quoteCurrency: 'USD',
+        openPrice: '1',
+        closePrice: '2',
+        size: '1',
+        direction: Period::DAILY,
+        openTime: '2024-01-01 12:00:00',
+    ))->toThrow(InvalidTradeException::class, "'daily' is not a valid trade direction");
+});
