@@ -92,5 +92,7 @@ jobs:
           TESTING_DB_DATABASE: testing
           TESTING_DB_USERNAME: testing
           TESTING_DB_PASSWORD: secret
-        # Coverage is enforced on the sqlite matrix; this is a correctness leg.
+        # Coverage is enforced on the sqlite matrix; this is a correctness leg. Keep it
+        # uninstrumented (coverage: none): it is where CI runs the 50,000-trade memory proofs,
+        # which skip under Xdebug's coverage mode.
         run: vendor/bin/pest --ci
