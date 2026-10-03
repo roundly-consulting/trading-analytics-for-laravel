@@ -57,7 +57,7 @@ defaults in one place. `config/trading-analytics.php`:
 ```php
 return [
     // Default decimal precision (bcmath scale) for every calculation.
-    'scale' => (int) env('TRADING_ANALYTICS_SCALE', 10),
+    'scale' => env('TRADING_ANALYTICS_SCALE', 10),
 
     // Default win-rate bucketing period: daily, weekly, or monthly.
     'win_rate_period' => env('TRADING_ANALYTICS_WIN_RATE_PERIOD', 'daily'),
@@ -66,8 +66,8 @@ return [
 
 | Key | Type | Default | Env var | Purpose |
 |---|---|---|---|---|
-| `scale` | `int` | `10` | `TRADING_ANALYTICS_SCALE` | Decimal places used when a run does not call `->scale()`. |
-| `win_rate_period` | `string` | `daily` | `TRADING_ANALYTICS_WIN_RATE_PERIOD` | Win-rate bucket when a run does not call `->usingWinRatePeriod()`. An unrecognised value falls back to `daily`. |
+| `scale` | `int` | `10` | `TRADING_ANALYTICS_SCALE` | Decimal places used when a run does not call `->scale()`. A whole number of at least `0` (`TRADING_ANALYTICS_SCALE=8` works); `ten`, `10.5` or an empty value throw an `InvalidConfigurationException` naming the key. |
+| `win_rate_period` | `string` | `daily` | `TRADING_ANALYTICS_WIN_RATE_PERIOD` | Win-rate bucket when a run does not call `->usingWinRatePeriod()`: `daily`, `weekly` or `monthly`. Anything else throws an `InvalidConfigurationException` listing them — it never falls back to `daily`. |
 
 A run's explicit `->scale(...)` / `->usingWinRatePeriod(...)` always overrides the configured
 default. Outside a booted Laravel app (no config bound), the built-in defaults (`scale` 10,
