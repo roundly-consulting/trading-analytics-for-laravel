@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\TradingAnalytics;
 
+use Closure;
+use RoundlyConsulting\PackageToolkit\Exceptions\InvalidConfigurationException;
 use RoundlyConsulting\PackageToolkit\Package;
 use RoundlyConsulting\PackageToolkit\PackageServiceProvider;
+use RoundlyConsulting\PackageToolkit\Support\Config;
 use RoundlyConsulting\TradingAnalytics\Enums\Period;
 
 final class TradingAnalyticsServiceProvider extends PackageServiceProvider
@@ -15,15 +18,10 @@ final class TradingAnalyticsServiceProvider extends PackageServiceProvider
         $package
             ->name('trading-analytics')
             ->hasConfigFile()
-            ->contributesToAbout(static function (): array {
-                $scale = config('trading-analytics.scale');
-                $period = config('trading-analytics.win_rate_period');
-
-                return [
-                    'Decimal scale' => is_numeric($scale) ? (string) (int) $scale : 'DEFAULT',
-                    'Win-rate period' => self::winRatePeriod($period),
-                ];
-            });
+            ->contributesToAbout(static fn (): array => [
+                'Decimal scale' => self::orInvalid(static fn (): string => (string) Config::integer('trading-analytics.scale', 10, min: 0)),
+                'Win-rate period' => self::orInvalid(static fn (): string => Config::enum('trading-analytics.win_rate_period', Period::class, Period::DAILY)->value),
+            ]);
     }
 
     public function register(): void
@@ -34,15 +32,17 @@ final class TradingAnalyticsServiceProvider extends PackageServiceProvider
     }
 
     /**
-     * The configured bucketing period, mirroring the engine's own
-     * fall-back-rather-than-throw handling of an unrecognised value.
+     * A strict read for an `about` row, mirroring the engine: a broken value renders as
+     * INVALID (the engine throws on it) and `about` keeps working.
+     *
+     * @param  Closure(): string  $read
      */
-    private static function winRatePeriod(mixed $configured): string
+    private static function orInvalid(Closure $read): string
     {
-        if (is_string($configured) && ($period = Period::tryFrom($configured)) !== null) {
-            return $period->value;
+        try {
+            return $read();
+        } catch (InvalidConfigurationException) {
+            return 'INVALID';
         }
-
-        return Period::DAILY->value.' (fallback)';
     }
 }

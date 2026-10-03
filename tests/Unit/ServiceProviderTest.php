@@ -33,15 +33,17 @@ it('contributes a section to the about command', function (): void {
         ->assertSuccessful();
 });
 
-it('reports an unset scale and an unrecognised period to the about command', function (): void {
+it('reports an unset scale as its default and a junk setting as INVALID (strict config)', function (): void {
     config()->set('trading-analytics.scale', null);
     config()->set('trading-analytics.win_rate_period', 'hourly');
 
     $this->artisan('about', ['--only' => 'trading-analytics'])
-        ->expectsOutputToContain('DEFAULT')
+        ->expectsOutputToContain('10')
         ->assertSuccessful();
 
+    config()->set('trading-analytics.scale', 'ten');
+
     $this->artisan('about', ['--only' => 'trading-analytics'])
-        ->expectsOutputToContain('fallback')
+        ->expectsOutputToContain('INVALID')
         ->assertSuccessful();
 });

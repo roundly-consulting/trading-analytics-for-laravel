@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\LazyCollection;
+use RoundlyConsulting\PackageToolkit\Exceptions\InvalidConfigurationException;
 use RoundlyConsulting\TradingAnalytics\Analytics;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
 use RoundlyConsulting\TradingAnalytics\Enums\Period;
@@ -203,13 +204,13 @@ it('reads the default win-rate period from config', function (LazyCollection $tr
         ->toBe(Period::WEEKLY);
 })->with('default-trades');
 
-it('falls back to daily on an invalid configured period', function (LazyCollection $trades) {
+it('refuses an invalid configured period instead of falling back to daily (strict config)', function (LazyCollection $trades) {
     config()->set('trading-analytics.win_rate_period', 'hourly');
 
-    $analytics = Analytics::make($trades)->only([Analytics\WinRateByPeriod::class])->calculate();
-
-    expect($analytics->winRateByPeriod?->period)
-        ->toBe(Period::DAILY);
+    expect(fn () => Analytics::make($trades))->toThrow(
+        InvalidConfigurationException::class,
+        'Configuration value [trading-analytics.win_rate_period] must be one of [daily, weekly, monthly], [hourly] given.',
+    );
 })->with('default-trades');
 
 it('uses the literal default scale when no config value is set', function (LazyCollection $trades) {
@@ -217,3 +218,49 @@ it('uses the literal default scale when no config value is set', function (LazyC
 
     expect(Analytics::make($trades)->getScale())->toBe(10);
 })->with('empty-trades');
+
+it('refuses a junk configured scale instead of using the default (strict config)', function (mixed $scale, LazyCollection $trades) {
+    config()->set('trading-analytics.scale', $scale);
+
+    expect(fn () => Analytics::make($trades))
+        ->toThrow(InvalidConfigurationException::class, '[trading-analytics.scale]');
+})->with([
+    'word' => 'ten',
+    'decimal' => '10.5',
+    'exponent' => '1e1',
+    'empty' => '',
+    'negative' => -1,
+    'bool' => true,
+])->with('default-trades');
+
+it('reads a canonical integer-string scale and a period name from env (strict config)', function (LazyCollection $trades) {
+    config()->set('trading-analytics.scale', '6');
+    config()->set('trading-analytics.win_rate_period', 'weekly');
+
+    $analytics = Analytics::make($trades);
+
+    expect($analytics->getScale())->toBe(6)
+        ->and($analytics->only([Analytics\WinRateByPeriod::class])->calculate()->winRateByPeriod?->period)->toBe(Period::WEEKLY);
+})->with('default-trades');
+
+it('keeps the built-in defaults outside a configured app (strict config)', function (LazyCollection $trades) {
+    config()->set('trading-analytics.scale', null);
+    config()->set('trading-analytics.win_rate_period', null);
+
+    $analytics = Analytics::make($trades);
+
+    expect($analytics->getScale())->toBe(10)
+        ->and($analytics->only([Analytics\WinRateByPeriod::class])->calculate()->winRateByPeriod?->period)->toBe(Period::DAILY);
+})->with('default-trades');
+
+it('hands the scale env value through raw (strict config)', function () {
+    $_SERVER['TRADING_ANALYTICS_SCALE'] = 'ten';
+
+    try {
+        $config = require __DIR__.'/../../config/trading-analytics.php';
+    } finally {
+        unset($_SERVER['TRADING_ANALYTICS_SCALE']);
+    }
+
+    expect($config['scale'])->toBe('ten');
+});

@@ -44,15 +44,15 @@ it('renders the trading-analytics section and reports the configured scale', fun
 });
 
 /**
- * The section's fallback branch: an unrecognised period is reported as a fallback rather
- * than echoed, mirroring the engine's own fall-back-rather-than-throw handling. Pinned
- * here because it is the one place the section's output is a *decision*, not a value.
+ * The section's INVALID branch: an unrecognised period renders as INVALID rather than as a
+ * default, mirroring the engine, which throws on it. Pinned here because it is the one place
+ * the section's output is a *decision*, not a value.
  */
-it('reports an unrecognised win-rate period as a fallback', function (): void {
+it('reports an unrecognised win-rate period as INVALID (strict config)', function (): void {
     config(['trading-analytics.win_rate_period' => 'fortnightly']);
 
     expect('trading-analytics')->toLeakNoSecrets(
         secrets: [],
-        mustRender: ['Win-rate period', 'daily (fallback)'],
+        mustRender: ['Win-rate period', 'INVALID'],
     );
 });

@@ -9,6 +9,8 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\LazyCollection;
 use JsonSerializable;
+use RoundlyConsulting\PackageToolkit\Exceptions\InvalidConfigurationException;
+use RoundlyConsulting\PackageToolkit\Support\Config;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results\Counts;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results\CumulativeReturn;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Results\Expectancy;
@@ -147,29 +149,31 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
     /**
      * The default bcmath scale: the configured value when a Laravel config
      * repository is bound, otherwise the library's built-in default so the
-     * engine still works outside a booted app.
+     * engine still works outside a booted app. A configured value must be a
+     * whole number of at least 0 (an int or a canonical integer string such
+     * as an env "8"); anything else throws rather than becoming a default.
+     *
+     * @throws InvalidConfigurationException
      */
     protected function defaultScale(): int
     {
-        $configured = $this->configuredValue('trading-analytics.scale');
+        $key = 'trading-analytics.scale';
 
-        return is_numeric($configured) ? (int) $configured : $this->scale;
+        return Config::for([$key => $this->configuredValue($key)])->integer($key, $this->scale, min: 0);
     }
 
     /**
-     * The default win-rate bucketing period: the configured value when bound
-     * and recognised, otherwise the built-in default. An unrecognised value
-     * falls back rather than throwing at construction.
+     * The default win-rate bucketing period: the configured value when bound,
+     * otherwise the built-in default. A configured value that names no period
+     * throws, listing daily, weekly and monthly — it never falls back.
+     *
+     * @throws InvalidConfigurationException
      */
     protected function defaultWinRatePeriod(): Period
     {
-        $configured = $this->configuredValue('trading-analytics.win_rate_period');
+        $key = 'trading-analytics.win_rate_period';
 
-        if (is_string($configured) && ($period = Period::tryFrom($configured)) !== null) {
-            return $period;
-        }
-
-        return $this->winRatePeriod;
+        return Config::for([$key => $this->configuredValue($key)])->enum($key, Period::class, $this->winRatePeriod);
     }
 
     /**

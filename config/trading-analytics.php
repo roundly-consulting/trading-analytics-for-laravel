@@ -11,11 +11,12 @@ return [
     |
     | The number of decimal places used for every calculation when a run does
     | not set its own scale via ->scale(). Higher values trade speed for
-    | precision.
+    | precision. A whole number of at least 0; anything else (e.g. "ten" or
+    | "10.5") throws an InvalidConfigurationException naming the key.
     |
     */
 
-    'scale' => (int) env('TRADING_ANALYTICS_SCALE', 10),
+    'scale' => env('TRADING_ANALYTICS_SCALE', 10),
 
     /*
     |--------------------------------------------------------------------------
@@ -24,7 +25,7 @@ return [
     |
     | The period win-rate-by-period buckets into when a run does not set its
     | own period via ->usingWinRatePeriod(). One of: daily, weekly, monthly.
-    | An unrecognised value falls back to daily.
+    | Anything else throws an InvalidConfigurationException listing them.
     |
     */
 
