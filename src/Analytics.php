@@ -151,7 +151,8 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
      * repository is bound, otherwise the library's built-in default so the
      * engine still works outside a booted app. A configured value must be a
      * whole number of at least 0 (an int or a canonical integer string such
-     * as an env "8"); anything else throws rather than becoming a default.
+     * as an env "8"); a blank one is not set, so the default applies; anything
+     * else throws rather than becoming a default.
      *
      * @throws InvalidConfigurationException
      */
@@ -164,8 +165,9 @@ class Analytics implements Arrayable, Jsonable, JsonSerializable
 
     /**
      * The default win-rate bucketing period: the configured value when bound,
-     * otherwise the built-in default. A configured value that names no period
-     * throws, listing daily, weekly and monthly — it never falls back.
+     * otherwise the built-in default. A blank value is not set, so the default
+     * applies; a value that names no period throws, listing daily, weekly and
+     * monthly — a typo never falls back.
      *
      * @throws InvalidConfigurationException
      */

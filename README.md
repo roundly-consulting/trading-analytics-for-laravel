@@ -66,8 +66,8 @@ return [
 
 | Key | Type | Default | Env var | Purpose |
 |---|---|---|---|---|
-| `scale` | `int` | `10` | `TRADING_ANALYTICS_SCALE` | Decimal places used when a run does not call `->scale()`. A whole number of at least `0` (`TRADING_ANALYTICS_SCALE=8` works); `ten`, `10.5` or an empty value throw an `InvalidConfigurationException` naming the key. |
-| `win_rate_period` | `string` | `daily` | `TRADING_ANALYTICS_WIN_RATE_PERIOD` | Win-rate bucket when a run does not call `->usingWinRatePeriod()`: `daily`, `weekly` or `monthly`. Anything else throws an `InvalidConfigurationException` listing them — it never falls back to `daily`. |
+| `scale` | `int` | `10` | `TRADING_ANALYTICS_SCALE` | Decimal places used when a run does not call `->scale()`. A whole number of at least `0` (`TRADING_ANALYTICS_SCALE=8` works); a blank value (`TRADING_ANALYTICS_SCALE=`) is not set, so `10` applies; `ten` or `10.5` throw an `InvalidConfigurationException` naming the key. |
+| `win_rate_period` | `string` | `daily` | `TRADING_ANALYTICS_WIN_RATE_PERIOD` | Win-rate bucket when a run does not call `->usingWinRatePeriod()`: `daily`, `weekly` or `monthly`. A blank value is not set, so `daily` applies; anything else throws an `InvalidConfigurationException` listing them — a typo never falls back to `daily`. |
 
 A run's explicit `->scale(...)` / `->usingWinRatePeriod(...)` always overrides the configured
 default. Outside a booted Laravel app (no config bound), the built-in defaults (`scale` 10,
