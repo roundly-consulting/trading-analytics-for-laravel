@@ -6,6 +6,8 @@ All notable changes to `trading-analytics-for-laravel` are documented in this fi
 
 ## Unreleased
 
+## 1.0.0 - 2026-10-03
+
 Initial public release.
 
 ### Added
