@@ -228,10 +228,19 @@ it('refuses a junk configured scale instead of using the default (strict config)
     'word' => 'ten',
     'decimal' => '10.5',
     'exponent' => '1e1',
-    'empty' => '',
     'negative' => -1,
     'bool' => true,
 ])->with('default-trades');
+
+it('reads a blank configured scale and period as not set, so the defaults apply (strict config)', function (string $blank, LazyCollection $trades) {
+    config()->set('trading-analytics.scale', $blank);
+    config()->set('trading-analytics.win_rate_period', $blank);
+
+    $analytics = Analytics::make($trades);
+
+    expect($analytics->getScale())->toBe(10)
+        ->and($analytics->only([Analytics\WinRateByPeriod::class])->calculate()->winRateByPeriod?->period)->toBe(Period::DAILY);
+})->with(['empty' => '', 'whitespace' => '  '])->with('default-trades');
 
 it('reads a canonical integer-string scale and a period name from env (strict config)', function (LazyCollection $trades) {
     config()->set('trading-analytics.scale', '6');
