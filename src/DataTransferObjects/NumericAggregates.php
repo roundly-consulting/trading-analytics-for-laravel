@@ -21,6 +21,15 @@ final class NumericAggregates implements Arrayable, Jsonable, JsonSerializable
 
     public NumericValueAsString $average;
 
+    /**
+     * The power of ten {@see $average} is scaled by while a cumulative return keeps its running
+     * growth product there as a mantissa: held as a plain decimal, a long losing streak's
+     * product sank below the scale and truncated to 0.
+     *
+     * @internal
+     */
+    public int $averageExponent = 0;
+
     public NumericValueAsString $highest;
 
     public string $highestPair = '';

@@ -59,3 +59,11 @@ it('seeds a root of a value beyond float range from its digit count', function (
     expect(BcMath::nthRoot($huge, 400, 10))->toBe('10.0000000000')
         ->and(BcMath::nthRoot('1'.str_repeat('0', 700), 2, 4))->toBe('1'.str_repeat('0', 350).'.0000');
 });
+
+it('roots a value below 10^-scale and a root far below 1', function () {
+    // Compared to 0 at the output scale, 1e-24 read as 0; and a value far below 1, started
+    // from 1, shrank by only (n − 1) / n per step and stopped at 100 steps nowhere near 0.5.
+    expect(BcMath::nthRoot('0.000000000000000000000001', 2))->toBe('0.00000000000100000000')
+        ->and(BcMath::sqrt('0.000000000000000000000001'))->toBe('0.00000000000100000000')
+        ->and(BcMath::nthRoot(bcpow('0.5', '1000', 400), 1000))->toBe('0.50000000000000000000');
+});

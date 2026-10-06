@@ -21,6 +21,14 @@ All notable changes to `trading-analytics-for-laravel` are documented in this fi
   price more than doubled): it is now `(−root − 1) × 100`. One sell from 100 to 250 averages
   −150.00 (it read +50.00). An even trade count has no real root, so the same signed root stands
   in for it. Behaviour change: such averages now read below −100 %.
+- The average cumulative return no longer collapses to −100 % over a long losing streak: the
+  running product of growth factors behind it is kept as a mantissa and a power of ten instead of
+  a 10-decimal number that truncated to 0 (500 trades at −5 % average −5.00, not −100.00; at 400
+  trades it read −5.43). The total, highest and lowest are unchanged. Behaviour change: such
+  averages now report the true geometric mean.
+- `BcMath::nthRoot()` and `BcMath::sqrt()` root a value below 10^-scale instead of returning 0
+  (`nthRoot('0.000000000000000000000001', 2)` is `0.00000000000100000000`), and `nthRoot()`
+  reaches a root far below 1 (`nthRoot(0.5^1000, 1000)` is `0.5`) instead of stopping short.
 - `Trade` now refuses a size or open price at or below 0 and a negative close price with
   `InvalidTradeException` (`nonPositiveSize`, `nonPositiveOpenPrice`, `negativeClosePrice`).
   A zero size used to abort the whole report with a `DivisionByZeroException` naming no row, and

@@ -20,12 +20,16 @@ use RoundlyConsulting\TradingAnalytics\Support\BcMath;
  *
  * During the pass an aggregate's `total` and `average` both carry the running product of the
  * growth factors (1 + return); the after-trades hook turns them into the cumulative return
- * and its geometric mean.
+ * and its geometric mean. The `average` holds it as a mantissa in [1, 10) times
+ * 10^`averageExponent`, so a long losing streak (0.95^500 ≈ 7 × 10^-12) never truncates to 0.
  */
 class GrossCumulativeReturn implements SequentialAnalyticsInterface
 {
     /** The scale each trade's return is divided at, like every other ratio the engine derives. */
     protected const int WORK_SCALE = 20;
+
+    /** The decimals the mantissa of the running product behind the average keeps. */
+    protected const int PRODUCT_SCALE = 30;
 
     public static function calculatePerTrade(Analytics $analytics, Trade $trade): void
     {
@@ -66,16 +70,39 @@ class GrossCumulativeReturn implements SequentialAnalyticsInterface
     {
         if ($aggregate->count === 0) {
             $aggregate->total->set(1);
-            $aggregate->average->set(1);
+            $aggregate->average->set(1, scale: self::PRODUCT_SCALE);
+            $aggregate->averageExponent = 0;
             $aggregate->highest->set(0, scale: 2);
             $aggregate->lowest->set(0, scale: 2);
         }
 
         $aggregate->count++;
         $aggregate->total->multiply($factor);
-        $aggregate->average->multiply($factor);
+        static::compoundAverage($aggregate, $factor);
 
         $aggregate->trackExtremes(static::percentage($aggregate->total), $pair);
+    }
+
+    /**
+     * Multiply one growth factor into the mantissa behind the average: exactly, then shifted
+     * back into [1, 10) with the shift moved into the exponent, so the product keeps its
+     * significant digits at any magnitude. A zero product (a −100 % trade) stays 0.
+     */
+    protected static function compoundAverage(NumericAggregates $aggregate, NumericValueAsString $factor): void
+    {
+        $exactScale = $aggregate->average->getScale() + $factor->getScale();
+        $product = bcmul($aggregate->average->toRawString(), $factor->toRawString(), $exactScale);
+
+        if (bccomp($product, '0', $exactScale) === 0) {
+            $aggregate->average->set(0);
+
+            return;
+        }
+
+        $exponent = BcMath::exponent($product);
+
+        $aggregate->average->set(BcMath::shift($product, -$exponent));
+        $aggregate->averageExponent += $exponent;
     }
 
     protected static function calculateAfterTradesCumulativeReturns(NumericDirectionalAggregates $dto): void
@@ -102,13 +129,13 @@ class GrossCumulativeReturn implements SequentialAnalyticsInterface
             return new NumericValueAsString(scale: 2);
         }
 
-        $product = $aggregate->average;
-        $isNegative = $product->isLessThan(0);
+        $mantissa = $aggregate->average;
+        $isNegative = $mantissa->isLessThan(0);
 
         // Geometric mean of the accumulated growth factors, computed entirely in
         // bcmath so the package's arbitrary-precision guarantee is not broken.
         $root = BcMath::nthRoot(
-            value: $product->abs(immutable: true)->toRawString(),
+            value: BcMath::shift($mantissa->abs(immutable: true)->toRawString(), $aggregate->averageExponent),
             n: $aggregate->count,
         );
 

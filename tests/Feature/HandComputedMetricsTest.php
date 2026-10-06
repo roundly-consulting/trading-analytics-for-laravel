@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\LazyCollection;
 use RoundlyConsulting\TradingAnalytics\Analytics;
 use RoundlyConsulting\TradingAnalytics\Analytics\GrossCumulativeReturn;
@@ -433,3 +434,26 @@ it('keeps the sign of a negative growth product in the average cumulative return
         ->and($net?->total->toRawString())->toBe('-150.00')
         ->and($net?->average->toRawString())->toBe('-150.00');
 });
+
+it('averages a long losing streak without the growth product truncating to 0', function (int $trades, string $close, string $average): void {
+    // 0.95^500 ≈ 7e-12 sat below the 10-decimal product, so its geometric mean read −100 %;
+    // already at 400 trades the truncated product skewed it to −5.43 %.
+    $losses = LazyCollection::make(static function () use ($trades, $close): Generator {
+        for ($i = 0; $i < $trades; $i++) {
+            $at = Carbon::create(2024, 1, 1)->addMinutes($i);
+
+            yield Trade::make('BTC', 'USD', '100', $close, '1', 'buy', $at, null, $at);
+        }
+    });
+
+    $gross = Analytics::for($losses)->only([GrossCumulativeReturn::class])->calculate()->cumulativeReturn?->gross->global->total;
+
+    expect($gross?->average->toRawString())->toBe($average)
+        ->and($gross?->total->toRawString())->toBe('-100.00')
+        ->and($gross?->lowest->toRawString())->toBe('-100.00');
+})->with([
+    '500 × −5 %' => [500, '95', '-5.00'],
+    '400 × −5 %' => [400, '95', '-5.00'],
+    '120 × −20 %' => [120, '80', '-20.00'],
+    '100 × −20 %' => [100, '80', '-20.00'],
+]);
