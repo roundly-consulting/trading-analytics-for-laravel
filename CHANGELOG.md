@@ -29,6 +29,9 @@ All notable changes to `trading-analytics-for-laravel` are documented in this fi
 - `BcMath::nthRoot()` and `BcMath::sqrt()` root a value below 10^-scale instead of returning 0
   (`nthRoot('0.000000000000000000000001', 2)` is `0.00000000000100000000`), and `nthRoot()`
   reaches a root far below 1 (`nthRoot(0.5^1000, 1000)` is `0.5`) instead of stopping short.
+- The profit factor is divided at a fixed work scale and truncated only into its 2-decimal
+  result, so it no longer depends on the run's `->scale()`: +5 / −3 reads 1.66 at `->scale(0)`
+  (it read 1.00) and at `->scale(1)` (it read 1.60).
 - `Trade` now refuses a size or open price at or below 0 and a negative close price with
   `InvalidTradeException` (`nonPositiveSize`, `nonPositiveOpenPrice`, `negativeClosePrice`).
   A zero size used to abort the whole report with a `DivisionByZeroException` naming no row, and

@@ -15,6 +15,9 @@ use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
  */
 class ProfitFactor implements AnalyticsInterface
 {
+    /** The scale the ratio is divided at before it is truncated to its own. */
+    protected const int WORK_SCALE = 20;
+
     public static function calculatePerTrade(Analytics $analytics, Trade $trade): void
     {
         //
@@ -75,9 +78,8 @@ class ProfitFactor implements AnalyticsInterface
             return $default;
         }
 
-        return $profit->divide(
-            value: $losses,
-            immutable: true
-        );
+        // Divided at the work scale and truncated only as the result: at the run scale, +5 / −3
+        // read 1.00 at ->scale(0) and 1.60 at ->scale(1).
+        return $profit->cloneWithScale(max(self::WORK_SCALE, $profit->getScale()))->divide(value: $losses);
     }
 }

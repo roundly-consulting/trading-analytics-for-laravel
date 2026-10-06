@@ -457,3 +457,14 @@ it('averages a long losing streak without the growth product truncating to 0', f
     '120 × −20 %' => [120, '80', '-20.00'],
     '100 × −20 %' => [100, '80', '-20.00'],
 ]);
+
+it('divides the profit factor at full precision whatever the run scale', function (int $scale): void {
+    // +5 / −3 = 1.666…: divided at scale 0 it was 1, at scale 1 it was 1.6.
+    $profitFactor = Analytics::for(LazyCollection::make([
+        Trade::make('BTC', 'USD', '100', '105', '1', 'buy', '2024-01-01 10:00:00', null, '2024-01-01 11:00:00'),
+        Trade::make('BTC', 'USD', '100', '97', '1', 'buy', '2024-01-02 10:00:00', null, '2024-01-02 11:00:00'),
+    ]))->only([ProfitFactor::class])->scale($scale)->calculate()->profitFactor;
+
+    expect($profitFactor?->total->toRawString())->toBe('1.66')
+        ->and($profitFactor?->forPair('BTC/USD')->toRawString())->toBe('1.66');
+})->with([0, 1, 10]);
