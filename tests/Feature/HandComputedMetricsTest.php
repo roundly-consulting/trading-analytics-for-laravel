@@ -11,7 +11,9 @@ use RoundlyConsulting\TradingAnalytics\Analytics\NetCumulativeReturn;
 use RoundlyConsulting\TradingAnalytics\Analytics\ProfitFactor;
 use RoundlyConsulting\TradingAnalytics\Analytics\Streaks;
 use RoundlyConsulting\TradingAnalytics\Analytics\TradingFrequency;
+use RoundlyConsulting\TradingAnalytics\Analytics\WinRateByPeriod;
 use RoundlyConsulting\TradingAnalytics\DataTransferObjects\Trade;
+use RoundlyConsulting\TradingAnalytics\Enums\Period;
 use RoundlyConsulting\TradingAnalytics\Exceptions\UnorderedTradeSourceException;
 
 /**
@@ -468,3 +470,21 @@ it('divides the profit factor at full precision whatever the run scale', functio
     expect($profitFactor?->total->toRawString())->toBe('1.66')
         ->and($profitFactor?->forPair('BTC/USD')->toRawString())->toBe('1.66');
 })->with([0, 1, 10]);
+
+it('buckets the win rate in the app timezone whatever offset a trade carries', function (Period $period, string $utc, string $newYork, string $bucket): void {
+    // The same instant written in two offsets landed in two buckets, each in its own calendar.
+    $trade = static fn (string $openedAt): Trade => Trade::make('BTC', 'USD', '100', '110', '1', 'buy', $openedAt, null, Carbon::parse($openedAt)->addHour());
+
+    $winRate = Analytics::for(LazyCollection::make([$trade($utc), $trade($newYork)]))
+        ->only([WinRateByPeriod::class])
+        ->usingWinRatePeriod($period)
+        ->calculate()
+        ->winRateByPeriod;
+
+    expect(date_default_timezone_get())->toBe('UTC')
+        ->and($winRate?->totals)->toBe([$bucket => 2]);
+})->with([
+    'daily' => [Period::DAILY, '2024-01-16T04:30:00+00:00', '2024-01-15T23:30:00-05:00', '2024-01-16'],
+    'weekly' => [Period::WEEKLY, '2024-01-15T04:30:00+00:00', '2024-01-14T23:30:00-05:00', '2024-W03'],
+    'monthly' => [Period::MONTHLY, '2024-02-01T04:30:00+00:00', '2024-01-31T23:30:00-05:00', '2024-02'],
+]);

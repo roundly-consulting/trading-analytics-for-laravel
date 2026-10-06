@@ -32,6 +32,11 @@ All notable changes to `trading-analytics-for-laravel` are documented in this fi
 - The profit factor is divided at a fixed work scale and truncated only into its 2-decimal
   result, so it no longer depends on the run's `->scale()`: +5 / −3 reads 1.66 at `->scale(0)`
   (it read 1.00) and at `->scale(1)` (it read 1.60).
+- The win rate by period (and `Period::bucketFor()`) buckets every trade's open time in the app
+  timezone (`date_default_timezone_get()`, which Laravel sets from `app.timezone`) for daily,
+  weekly and monthly periods. The same instant written with two offsets (`+00:00` and `-05:00`)
+  used to land in two buckets. Behaviour change: trades carrying a non-app offset may move to
+  another bucket.
 - `Trade` now refuses a size or open price at or below 0 and a negative close price with
   `InvalidTradeException` (`nonPositiveSize`, `nonPositiveOpenPrice`, `negativeClosePrice`).
   A zero size used to abort the whole report with a `DivisionByZeroException` naming no row, and

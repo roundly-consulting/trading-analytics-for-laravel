@@ -11,7 +11,7 @@ use RoundlyConsulting\TradingAnalytics\Interfaces\AnalyticsInterface;
 
 /**
  * Win rate bucketed by calendar period (daily / weekly / monthly), keyed on each
- * trade's open time. Buckets are filled in the single pass.
+ * trade's open time in the app timezone. Buckets are filled in the single pass.
  */
 class WinRateByPeriod implements AnalyticsInterface
 {
