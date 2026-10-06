@@ -6,6 +6,14 @@ All notable changes to `trading-analytics-for-laravel` are documented in this fi
 
 ## Unreleased
 
+### Fixed
+
+- `Trade` now refuses a size or open price at or below 0 and a negative close price with
+  `InvalidTradeException` (`nonPositiveSize`, `nonPositiveOpenPrice`, `negativeClosePrice`).
+  A zero size used to abort the whole report with a `DivisionByZeroException` naming no row, and
+  a negative size flipped the P&L against the ROI. Behaviour change: such rows now throw when
+  the trade is built. A close price of 0 (a total loss) stays valid.
+
 ## 1.0.0 - 2026-10-03
 
 Initial public release.

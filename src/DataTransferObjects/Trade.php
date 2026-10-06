@@ -63,6 +63,20 @@ final class Trade implements Arrayable, Jsonable, JsonSerializable
         if ($this->closeTime !== null && $this->closeTime->lessThan($this->openTime)) {
             throw InvalidTradeException::closeBeforeOpen();
         }
+
+        // Every return divides by the value at entry (open price × size), and a negative size
+        // would flip the P&L against the ROI. A close at 0 is a real total loss.
+        if (! $this->size->isPositiveNonZero()) {
+            throw InvalidTradeException::nonPositiveSize($this->size->toRawString());
+        }
+
+        if (! $this->openPrice->isPositiveNonZero()) {
+            throw InvalidTradeException::nonPositiveOpenPrice($this->openPrice->toRawString());
+        }
+
+        if ($this->closePrice->isLessThan(0)) {
+            throw InvalidTradeException::negativeClosePrice($this->closePrice->toRawString());
+        }
     }
 
     /**

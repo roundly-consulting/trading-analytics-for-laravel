@@ -360,3 +360,18 @@ it('refuses an enum whose value is not a direction', function () {
         openTime: '2024-01-01 12:00:00',
     ))->toThrow(InvalidTradeException::class, "'daily' is not a valid trade direction");
 });
+
+it('refuses a size or open price at or below zero and a negative close price', function (string $open, string $close, string $size, string $message) {
+    // A zero size divided the ROI by zero and aborted the whole run; a negative one flipped the
+    // P&L against the ROI. A close at 0 (a total loss) stays valid.
+    expect(fn () => Trade::make('BTC', 'USD', $open, $close, $size, 'buy', '2024-01-01 10:00:00'))
+        ->toThrow(InvalidTradeException::class, $message)
+        ->and(Trade::make('BTC', 'USD', '100', '0', '1', 'buy', '2024-01-01 10:00:00')->closePrice->toRawString())
+        ->toBe('0.0000000000');
+})->with([
+    'zero size' => ['100', '110', '0', "size must be greater than 0; got '0.0000000000'"],
+    'negative size' => ['100', '110', '-1', "size must be greater than 0; got '-1.0000000000'"],
+    'zero open price' => ['0', '110', '1', "open price must be greater than 0; got '0.0000000000'"],
+    'negative open price' => ['-100', '110', '1', "open price must be greater than 0; got '-100.0000000000'"],
+    'negative close price' => ['100', '-1', '1', "close price cannot be negative; got '-1.0000000000'"],
+]);

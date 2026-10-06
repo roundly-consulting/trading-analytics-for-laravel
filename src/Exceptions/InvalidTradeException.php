@@ -16,6 +16,21 @@ final class InvalidTradeException extends TradingAnalyticsException
         return new self("A trade's close time cannot be before its open time.");
     }
 
+    public static function nonPositiveSize(string $size): self
+    {
+        return new self("A trade's size must be greater than 0; got '{$size}'.");
+    }
+
+    public static function nonPositiveOpenPrice(string $price): self
+    {
+        return new self("A trade's open price must be greater than 0; got '{$price}'.");
+    }
+
+    public static function negativeClosePrice(string $price): self
+    {
+        return new self("A trade's close price cannot be negative; got '{$price}'.");
+    }
+
     public static function missingField(string $field): self
     {
         return new self("A trade is missing the required '{$field}' field.");
