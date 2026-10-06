@@ -65,5 +65,7 @@ it('roots a value below 10^-scale and a root far below 1', function () {
     // from 1, shrank by only (n − 1) / n per step and stopped at 100 steps nowhere near 0.5.
     expect(BcMath::nthRoot('0.000000000000000000000001', 2))->toBe('0.00000000000100000000')
         ->and(BcMath::sqrt('0.000000000000000000000001'))->toBe('0.00000000000100000000')
-        ->and(BcMath::nthRoot(bcpow('0.5', '1000', 400), 1000))->toBe('0.50000000000000000000');
+        ->and(BcMath::nthRoot(bcpow('0.5', '1000', 400), 1000))->toBe('0.50000000000000000000')
+        // A root below 10^-scale (here 1e-30) is still 0 at that scale.
+        ->and(BcMath::nthRoot('0.'.str_repeat('0', 59).'1', 2))->toBe('0.00000000000000000000');
 });
