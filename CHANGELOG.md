@@ -6,6 +6,21 @@ All notable changes to `trading-analytics-for-laravel` are documented in this fi
 
 ## Unreleased
 
+## 1.1.0 - 2026-10-06
+
+### Added
+
+- `Trade::roi()` takes an optional `scale` argument: the scale the ROI is divided at (never below
+  the trade's own amount scale).
+- `InvalidTradeException::nonPositiveSize()`, `nonPositiveOpenPrice()` and `negativeClosePrice()`
+  for a trade built with a size or open price at or below 0, or a negative close price.
+
+### Changed
+
+- Documentation: the README hero image uses an absolute URL, so it renders on Packagist and other
+  sites.
+- Maintenance: `composer.json` `homepage` and `support.docs` link to the package documentation.
+
 ### Fixed
 
 - `Trade::make()` (and `fromArray()` / `fromRow()`) keeps every amount exactly — at its own
