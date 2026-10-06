@@ -16,6 +16,11 @@ All notable changes to `trading-analytics-for-laravel` are documented in this fi
   its P&L in full. A value at entry of 0 reads an ROI of 0. Behaviour change: figures for amounts
   past the 10th decimal now carry those digits (`profitAndLoss()` widens past 10 decimals only
   when the exact result needs it).
+- The average cumulative return (`cumulativeReturn->gross` / `->net` `average`) no longer flips
+  the sign when the growth product is negative (a trade lost more than 100 %, e.g. a short whose
+  price more than doubled): it is now `(−root − 1) × 100`. One sell from 100 to 250 averages
+  −150.00 (it read +50.00). An even trade count has no real root, so the same signed root stands
+  in for it. Behaviour change: such averages now read below −100 %.
 - `Trade` now refuses a size or open price at or below 0 and a negative close price with
   `InvalidTradeException` (`nonPositiveSize`, `nonPositiveOpenPrice`, `negativeClosePrice`).
   A zero size used to abort the whole report with a `DivisionByZeroException` naming no row, and

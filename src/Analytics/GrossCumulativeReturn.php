@@ -112,9 +112,15 @@ class GrossCumulativeReturn implements SequentialAnalyticsInterface
             n: $aggregate->count,
         );
 
+        // A negative product (a trade that lost more than 100 %) keeps its sign on the root:
+        // −|product|^(1/n) is the real root for an odd count. An even count has no real root,
+        // so the same signed root stands in for it and keeps the average below −100 %.
         $geometricMean = new NumericValueAsString(value: $root, scale: 20);
-        $geometricMean->subtract(1);
 
-        return $geometricMean->multiply($isNegative ? -100 : 100)->round(2);
+        if ($isNegative) {
+            $geometricMean->multiply(-1);
+        }
+
+        return $geometricMean->subtract(1)->multiply(100)->round(2);
     }
 }

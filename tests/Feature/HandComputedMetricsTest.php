@@ -408,3 +408,28 @@ it('keeps amounts past the 10th decimal exact through the run', function (): voi
 
     expect($pepe->roi()->toRawString())->toBe('0.00');
 });
+
+it('keeps the sign of a negative growth product in the average cumulative return', function (): void {
+    // A short that more than doubles against you returns −150 %: growth factor −0.5. Over one
+    // trade the geometric mean is that trade, so the average must equal the total, not +50 %.
+    $loss = Trade::make('PEPE', 'USDT', '100', '250', '1', 'sell', '2024-01-01 10:00:00', null, '2024-01-01 11:00:00');
+    $gain = static fn (int $day): Trade => Trade::make('BTC', 'USD', '100', '110', '1', 'buy', "2024-01-0{$day} 10:00:00", null, "2024-01-0{$day} 11:00:00");
+    // A fee of 150 on a flat 100 position is the same −150 % net.
+    $fee = Trade::make('BTC', 'USD', '100', '100', '1', 'buy', '2024-01-01 10:00:00', '150', '2024-01-01 11:00:00');
+
+    $single = Analytics::for(LazyCollection::make([$loss]))->calculate()->cumulativeReturn?->gross->global->total;
+    // −0.5 × 1.1 × 1.1 = −0.605: total −160.50 %, average −∛0.605 − 1 = −184.5769… %.
+    $three = Analytics::for(LazyCollection::make([$loss, $gain(2), $gain(3)]))->calculate()->cumulativeReturn?->gross->global->total;
+    // −0.5 × 1.1 = −0.55 has no real square root: the signed root −√0.55 stands in, −174.16 %.
+    $two = Analytics::for(LazyCollection::make([$loss, $gain(2)]))->calculate()->cumulativeReturn?->gross->global->total;
+    $net = Analytics::for(LazyCollection::make([$fee]))->calculate()->cumulativeReturn?->net->global->total;
+
+    expect($single?->total->toRawString())->toBe('-150.00')
+        ->and($single?->average->toRawString())->toBe('-150.00')
+        ->and($three?->total->toRawString())->toBe('-160.50')
+        ->and($three?->average->toRawString())->toBe('-184.58')
+        ->and($two?->total->toRawString())->toBe('-155.00')
+        ->and($two?->average->toRawString())->toBe('-174.16')
+        ->and($net?->total->toRawString())->toBe('-150.00')
+        ->and($net?->average->toRawString())->toBe('-150.00');
+});
