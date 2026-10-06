@@ -41,6 +41,15 @@ final class Trade implements Arrayable, Jsonable, JsonSerializable
     /** Every field a row is read for. */
     private const array FIELDS = [...self::REQUIRED_FIELDS, 'commission', 'close_time'];
 
+    /** The fewest decimals {@see make()} keeps an amount at — the package's default scale. */
+    private const int MIN_AMOUNT_SCALE = 10;
+
+    /**
+     * The most decimals {@see make()} keeps an amount at: far past any real price or size, and
+     * it stops a short exponent such as `1e-999999` from expanding into a string that long.
+     */
+    private const int MAX_AMOUNT_SCALE = NumericValueAsString::MAX_EXPONENT;
+
     public function __construct(
         public string $baseCurrency,
         public string $quoteCurrency,
@@ -84,6 +93,8 @@ final class Trade implements Arrayable, Jsonable, JsonSerializable
      * {@see NumericValueAsString} for the caller so they never type
      * `new NumericValueAsString(...)` by hand.
      *
+     * Every amount is kept exactly: at its own decimal places, and at least 10.
+     *
      * The direction may be any string-backed enum whose value is `buy` or `sell` (a host's
      * own cast enum included); times may be any `DateTimeInterface` or a parseable string.
      */
@@ -101,12 +112,12 @@ final class Trade implements Arrayable, Jsonable, JsonSerializable
         return new self(
             baseCurrency: $baseCurrency,
             quoteCurrency: $quoteCurrency,
-            openPrice: NumericValueAsString::of($openPrice),
-            closePrice: NumericValueAsString::of($closePrice),
-            size: NumericValueAsString::of($size),
+            openPrice: self::amount($openPrice),
+            closePrice: self::amount($closePrice),
+            size: self::amount($size),
             direction: self::parseDirection($direction),
             openTime: self::parseTime($openTime),
-            commission: $commission === null ? null : NumericValueAsString::of($commission),
+            commission: $commission === null ? null : self::amount($commission),
             closeTime: self::parseNullableTime($closeTime),
         );
     }
@@ -245,6 +256,32 @@ final class Trade implements Arrayable, Jsonable, JsonSerializable
             : throw InvalidTradeException::invalidField($field, 'a date string or DateTimeInterface', $value);
     }
 
+    /**
+     * An amount at the scale that keeps it exact. At the default scale 10 a 14-decimal size
+     * lost its last digits, and a tiny position's value at entry truncated to 0.
+     */
+    private static function amount(string|int|float|NumericValueAsString $value): NumericValueAsString
+    {
+        return NumericValueAsString::of($value, scale: self::scaleOf($value));
+    }
+
+    private static function scaleOf(string|int|float|NumericValueAsString $value): int
+    {
+        if ($value instanceof NumericValueAsString) {
+            return max(self::MIN_AMOUNT_SCALE, $value->getScale());
+        }
+
+        // A float casts to exponent notation ('1.0E-15'): its decimals are the fraction's
+        // digits minus the exponent. Anything non-numeric is left to NumericValueAsString to refuse.
+        if (preg_match('/^\s*[+-]?\d*(?:\.(\d*))?(?:[eE]([+-]?\d+))?\s*$/', (string) $value, $parts) !== 1) {
+            return self::MIN_AMOUNT_SCALE;
+        }
+
+        $decimals = strlen($parts[1] ?? '') - (int) ($parts[2] ?? 0);
+
+        return min(max(self::MIN_AMOUNT_SCALE, $decimals), self::MAX_AMOUNT_SCALE);
+    }
+
     private static function parseDirection(BackedEnum|string $direction): Direction
     {
         if ($direction instanceof Direction) {
@@ -286,54 +323,76 @@ final class Trade implements Arrayable, Jsonable, JsonSerializable
         return ! $this->isRealized();
     }
 
+    /**
+     * The profit or loss, exact: at the trade's amount scale, widened to every decimal the
+     * product needs, so a run at any scale truncates it only once, into its own result.
+     */
     public function profitAndLoss(bool $subtractCommissions = false): NumericValueAsString
     {
-        if ($this->direction->isBuy()) {
-            $pnl = $this->closePrice->subtract(
-                value: $this->openPrice,
-                immutable: true,
-            )->multiply(
-                value: $this->size,
-                immutable: true,
-            );
-        } else {
-            $pnl = $this->openPrice->subtract(
-                value: $this->closePrice,
-                immutable: true,
-            )->multiply(
-                value: $this->size,
-                immutable: true,
-            );
+        $scale = $this->amountScale();
+
+        $move = $this->direction->isBuy()
+            ? bcsub($this->closePrice->toRawString(), $this->openPrice->toRawString(), $scale)
+            : bcsub($this->openPrice->toRawString(), $this->closePrice->toRawString(), $scale);
+
+        // A difference of two amounts times a third carries at most twice their scale.
+        $pnl = bcmul($move, $this->size->toRawString(), 2 * $scale);
+
+        if ($subtractCommissions && $this->commission !== null) {
+            $pnl = bcsub($pnl, $this->commission->toRawString(), 2 * $scale);
         }
 
-        if ($subtractCommissions && $this->commission) {
-            $pnl = $pnl->subtract(
-                value: $this->commission,
-                immutable: true,
-            );
-        }
-
-        return $pnl;
+        return new NumericValueAsString($pnl, scale: max($scale, self::decimalsOf($pnl)));
     }
 
-    public function roi(bool $subtractCommissions = false, bool $asPercentage = true): NumericValueAsString
+    /**
+     * The return on the value at entry (open price × size): the exact P&L divided by the exact
+     * entry value at `$scale` — at least the trade's amount scale. Without a value at entry the
+     * return is undefined and reads 0, like every other undefined ratio; the constructor refuses
+     * the zero size or open price that would cause it.
+     */
+    public function roi(bool $subtractCommissions = false, bool $asPercentage = true, ?int $scale = null): NumericValueAsString
     {
-        $pnl = $this->profitAndLoss($subtractCommissions);
+        $amountScale = $this->amountScale();
+        $scale = max($scale ?? 0, $amountScale);
+        $entryValue = bcmul($this->openPrice->toRawString(), $this->size->toRawString(), 2 * $amountScale);
 
-        $roi = $pnl->divide(
-            value: $this->openPrice->multiply(
-                value: $this->size,
-                immutable: true,
-            ),
-            immutable: true,
-        );
+        $roi = bccomp($entryValue, '0', 2 * $amountScale) === 0
+            ? new NumericValueAsString(scale: $scale)
+            : new NumericValueAsString(
+                value: bcdiv($this->profitAndLoss($subtractCommissions)->toRawString(), $entryValue, $scale),
+                scale: $scale,
+            );
 
         if (! $asPercentage) {
             return $roi;
         }
 
-        return $roi->multiply(value: 100, immutable: true)
+        return $roi->multiply(value: 100)
             ->round(2);
+    }
+
+    /** The widest scale among the trade's amounts — the scale their sums and differences are exact at. */
+    private function amountScale(): int
+    {
+        return max(
+            $this->openPrice->getScale(),
+            $this->closePrice->getScale(),
+            $this->size->getScale(),
+            $this->commission?->getScale() ?? 0,
+        );
+    }
+
+    /**
+     * The decimal places a numeric string needs, trailing zeros dropped.
+     *
+     * @param  numeric-string  $value
+     */
+    private static function decimalsOf(string $value): int
+    {
+        $point = strpos($value, '.');
+
+        return $point === false ? 0 : strlen(rtrim(substr($value, $point + 1), '0'));
     }
 
     /** @return array<string, mixed> */

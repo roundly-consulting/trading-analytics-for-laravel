@@ -8,6 +8,14 @@ All notable changes to `trading-analytics-for-laravel` are documented in this fi
 
 ### Fixed
 
+- `Trade::make()` (and `fromArray()` / `fromRow()`) keeps every amount exactly — at its own
+  decimal places, at least 10 — instead of cutting it to 10 decimals. `Trade::profitAndLoss()` is
+  now exact, and `Trade::roi()` divides the exact P&L by the exact value at entry (new optional
+  `scale` argument), so a tiny position (e.g. 0.000001 PEPE at 0.00001) no longer throws
+  `DivisionByZeroException`, and a run at `->scale(18)` reports a 14-decimal size, its value and
+  its P&L in full. A value at entry of 0 reads an ROI of 0. Behaviour change: figures for amounts
+  past the 10th decimal now carry those digits (`profitAndLoss()` widens past 10 decimals only
+  when the exact result needs it).
 - `Trade` now refuses a size or open price at or below 0 and a negative close price with
   `InvalidTradeException` (`nonPositiveSize`, `nonPositiveOpenPrice`, `negativeClosePrice`).
   A zero size used to abort the whole report with a `DivisionByZeroException` naming no row, and

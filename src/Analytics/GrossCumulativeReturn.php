@@ -24,6 +24,9 @@ use RoundlyConsulting\TradingAnalytics\Support\BcMath;
  */
 class GrossCumulativeReturn implements SequentialAnalyticsInterface
 {
+    /** The scale each trade's return is divided at, like every other ratio the engine derives. */
+    protected const int WORK_SCALE = 20;
+
     public static function calculatePerTrade(Analytics $analytics, Trade $trade): void
     {
         $dto = static::dto($analytics);
@@ -51,7 +54,7 @@ class GrossCumulativeReturn implements SequentialAnalyticsInterface
 
     protected static function getReturnFromTrade(Trade $trade): NumericValueAsString
     {
-        return $trade->roi(asPercentage: false);
+        return $trade->roi(asPercentage: false, scale: self::WORK_SCALE);
     }
 
     /**

@@ -18,6 +18,6 @@ class NetCumulativeReturn extends GrossCumulativeReturn
 
     protected static function getReturnFromTrade(Trade $trade): NumericValueAsString
     {
-        return $trade->roi(subtractCommissions: true, asPercentage: false);
+        return $trade->roi(subtractCommissions: true, asPercentage: false, scale: self::WORK_SCALE);
     }
 }

@@ -17,11 +17,11 @@ class TradingValue extends BaseNumericDirectionalAggregatesByCurrencyCalculator
         return $analytics->value;
     }
 
+    /** Size × open price, exact (the sum of both scales), so the run's scale truncates it only once. */
     protected static function value(Trade $trade): NumericValueAsString
     {
-        return $trade->size->multiply(
-            value: $trade->openPrice,
-            immutable: true,
-        );
+        return $trade->size
+            ->cloneWithScale($trade->size->getScale() + $trade->openPrice->getScale())
+            ->multiply($trade->openPrice);
     }
 }

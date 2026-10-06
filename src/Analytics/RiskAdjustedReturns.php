@@ -30,7 +30,7 @@ class RiskAdjustedReturns implements MultiPassAnalyticsInterface
         }
 
         $result->recordReturn(
-            $trade->roi(subtractCommissions: true, asPercentage: false)->cloneWithScale(self::WORK_SCALE),
+            $trade->roi(subtractCommissions: true, asPercentage: false, scale: $analytics->getScale())->cloneWithScale(self::WORK_SCALE),
         );
     }
 

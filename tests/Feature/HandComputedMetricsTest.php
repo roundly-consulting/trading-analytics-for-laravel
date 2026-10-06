@@ -381,3 +381,30 @@ it('reports every amount at the run scale', function (): void {
         ->and($analytics->maxDrawdown?->value->toRawString())->toBe('11.0000')
         ->and($analytics->riskRewardRatio?->value->toRawString())->toBe('1.5000');
 });
+
+it('keeps amounts past the 10th decimal exact through the run', function (): void {
+    // A PEPE position worth 0.00001 × 0.000001 = 1e-11 at entry: cut to 10 decimals it was 0,
+    // and the ROI divided by it threw. Its exact return is 0.000001 / 0.00001 = 10 %.
+    $pepe = Trade::make('PEPE', 'USDT', '0.00001', '0.000011', '0.000001', 'buy', '2024-01-01 10:00', null, '2024-01-01 11:00');
+    $tiny = Analytics::for(LazyCollection::make([$pepe]))->calculate();
+    $tinyAt18 = Analytics::for(LazyCollection::make([$pepe]))->scale(18)->calculate();
+
+    // At ->scale(18), a 14-decimal ETH size was cut to 0.0000000001 before the run saw it:
+    // (2100 − 2000) × 0.00000000012345 = 0.000000012345.
+    $eth = Trade::make('ETH', 'USD', '2000', '2100', '0.00000000012345', 'buy', '2024-01-01 10:00', null, '2024-01-01 11:00');
+    $precise = Analytics::for(LazyCollection::make([$eth]))->scale(18)->calculate();
+
+    expect($pepe->roi()->toRawString())->toBe('10.00')
+        ->and($tiny->cumulativeReturn?->gross->global->total->total->toRawString())->toBe('10.00')
+        ->and($tiny->realizedProfitAndLoss?->gross->global->total->total->toRawString())->toBe('0.0000000000')
+        ->and($tinyAt18->value?->global->total->total->toRawString())->toBe('0.000000000010000000')
+        ->and($tinyAt18->realizedProfitAndLoss?->gross->global->total->total->toRawString())->toBe('0.000000000001000000')
+        ->and($precise->volume?->global->total->total->toRawString())->toBe('0.000000000123450000')
+        ->and($precise->realizedProfitAndLoss?->gross->global->total->total->toRawString())->toBe('0.000000012345000000')
+        ->and($precise->value?->global->total->total->toRawString())->toBe('0.000000246900000000');
+
+    // No value at entry (a built trade's size mutated to 0): an undefined return reads 0.
+    $pepe->size->set(0);
+
+    expect($pepe->roi()->toRawString())->toBe('0.00');
+});
