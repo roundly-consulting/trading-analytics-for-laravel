@@ -6,6 +6,11 @@ All notable changes to `trading-analytics-for-laravel` are documented in this fi
 
 ## Unreleased
 
+### Changed
+
+- Maintenance: requires the latest roundly packages — package-toolkit `^1.3.0`, enums `^1.1.0`; dev:
+  testing `^1.2.1`.
+
 ## 1.1.0 - 2026-10-06
 
 ### Added
