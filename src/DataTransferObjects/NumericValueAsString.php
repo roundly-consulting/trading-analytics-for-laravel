@@ -310,6 +310,11 @@ final class NumericValueAsString implements Arrayable, Jsonable, JsonSerializabl
     /** @return numeric-string */
     protected function value(string|int|float|NumericValueAsString $value): string
     {
+        // Refused before the cast: PHP 8.5 warns when NAN is cast to a string.
+        if (is_float($value) && ! is_finite($value)) {
+            throw InvalidNumericOperationException::nonNumericValue(is_nan($value) ? 'NAN' : ($value > 0 ? 'INF' : '-INF'));
+        }
+
         $value = $value instanceof NumericValueAsString ? $value->toRawString() : (string) $value;
 
         // PHP accepts padding and exponent notation as numeric (a float casts to '1.0E-5'),
