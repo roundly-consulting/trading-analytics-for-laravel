@@ -6,6 +6,8 @@ All notable changes to `trading-analytics-for-laravel` are documented in this fi
 
 ## Unreleased
 
+## 2.0.0 - 2026-11-07
+
 ### Changed
 
 - **Breaking:** requires Laravel 13; Laravel 12 is no longer supported. Upgrade the application to Laravel 13 before updating.
