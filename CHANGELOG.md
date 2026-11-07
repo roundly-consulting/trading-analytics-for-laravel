@@ -6,6 +6,17 @@ All notable changes to `trading-analytics-for-laravel` are documented in this fi
 
 ## Unreleased
 
+### Changed
+
+- **Breaking:** requires Laravel 13; Laravel 12 is no longer supported. Upgrade the application to Laravel 13 before updating.
+- Requires the 2.x releases of the Roundly packages it builds on (their Laravel 13 releases).
+- Maintenance: tested on PHP 8.4, 8.5 and 8.6; the test suite runs on Pest 5.
+
+### Fixed
+
+- On PHP 8.5 and later, a `NAN` or infinite float throws `InvalidNumericOperationException` again,
+  without a PHP warning first.
+
 ## 1.1.1 - 2026-10-11
 
 ### Changed

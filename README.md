@@ -26,7 +26,7 @@ and memory stays flat however long the history is.
 
 ## Installation
 
-Requires PHP 8.4 with `ext-bcmath`, and Laravel 12 or 13.
+Requires PHP 8.4 with `ext-bcmath`, and Laravel 13.
 
 ```bash
 composer require roundly-consulting/trading-analytics-for-laravel
